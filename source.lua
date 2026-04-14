@@ -554,15 +554,15 @@ function XiroLib:CreateWindow(config)
         ---- CREATE ACCORDION ----
         function Tab:CreateAccordion(accordionName)
             local isExpanded = false
+            local animating = false
 
-            -- Container frame (auto-sizes based on content)
+            -- Container frame (clips content for slide animation)
             local container = Instance.new("Frame")
             container.Name = "Accordion_" .. (accordionName or "")
-            container.AutomaticSize = Enum.AutomaticSize.Y
-            container.Size = UDim2.new(1, 0, 0, 0)
+            container.Size = UDim2.new(1, 0, 0, ACCORDION_H)
             container.BackgroundTransparency = 1
             container.LayoutOrder = nextOrder()
-            container.ClipsDescendants = false
+            container.ClipsDescendants = true
             container.Parent = scrollFrame
 
             local containerLayout = Instance.new("UIListLayout")
@@ -602,13 +602,13 @@ function XiroLib:CreateWindow(config)
             headerLabel.TextXAlignment = Enum.TextXAlignment.Left
             headerLabel.Parent = header
 
-            -- Content frame (holds child elements, hidden by default)
+            -- Content frame (holds child elements, always present but clipped)
             local content = Instance.new("Frame")
             content.Name = "Content"
             content.AutomaticSize = Enum.AutomaticSize.Y
             content.Size = UDim2.new(1, 0, 0, 0)
             content.BackgroundTransparency = 1
-            content.Visible = false
+            content.Visible = true
             content.LayoutOrder = 1
             content.Parent = container
 
@@ -617,7 +617,7 @@ function XiroLib:CreateWindow(config)
             contentInnerLayout.Padding = UDim.new(0, GAP)
             contentInnerLayout.Parent = content
 
-            -- Toggle expand/collapse
+            -- Toggle expand/collapse with slide animation
             local headerBtn = Instance.new("TextButton")
             headerBtn.Size = UDim2.new(1, 0, 1, 0)
             headerBtn.BackgroundTransparency = 1
@@ -625,10 +625,31 @@ function XiroLib:CreateWindow(config)
             headerBtn.Parent = header
 
             headerBtn.MouseButton1Click:Connect(function()
+                if animating then return end
+                animating = true
                 isExpanded = not isExpanded
-                content.Visible = isExpanded
                 arrow.Text = isExpanded and "▼" or "▶"
                 tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.12)
+
+                if isExpanded then
+                    -- Calculate target height from content
+                    local contentH = contentInnerLayout.AbsoluteContentSize.Y
+                    local targetH = ACCORDION_H + GAP + contentH
+                    -- Slide open
+                    local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
+                    -- Fade in children
+                    for _, d in content:GetDescendants() do
+                        if d:IsA("TextLabel") or d:IsA("TextButton") then
+                            d.TextTransparency = 1
+                            tw(d, {TextTransparency = 0}, 0.25)
+                        end
+                    end
+                    t.Completed:Connect(function() animating = false end)
+                else
+                    -- Slide closed
+                    local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
+                    t.Completed:Connect(function() animating = false end)
+                end
             end)
 
             headerBtn.MouseEnter:Connect(function()
