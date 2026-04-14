@@ -286,6 +286,62 @@ function XiroLib:CreateWindow(config)
     notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     notifLayout.Parent = notifContainer
 
+    -- Save original transparency values for fade animation
+    local function saveOrigTransparency(obj)
+        if obj:GetAttribute("_xOrigBT") ~= nil then return end
+        if obj:IsA("GuiObject") then
+            obj:SetAttribute("_xOrigBT", obj.BackgroundTransparency)
+        end
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            obj:SetAttribute("_xOrigTT", obj.TextTransparency)
+        end
+        if obj:IsA("ScrollingFrame") then
+            obj:SetAttribute("_xOrigSB", obj.ScrollBarImageTransparency)
+        end
+        if obj:IsA("UIStroke") then
+            obj:SetAttribute("_xOrigST", obj.Transparency)
+        end
+    end
+
+    local function fadeOutPanel(p, delay)
+        task.delay(delay, function()
+            tw(p, {BackgroundTransparency = 1}, 0.2)
+            for _, d in p:GetDescendants() do
+                saveOrigTransparency(d)
+                if d:IsA("TextLabel") or d:IsA("TextButton") then
+                    tw(d, {TextTransparency = 1}, 0.2)
+                elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
+                    tw(d, {BackgroundTransparency = 1}, 0.2)
+                end
+                if d:IsA("ScrollingFrame") then
+                    tw(d, {ScrollBarImageTransparency = 1}, 0.2)
+                end
+                if d:IsA("UIStroke") then
+                    tw(d, {Transparency = 1}, 0.2)
+                end
+            end
+        end)
+    end
+
+    local function fadeInPanel(p, delay)
+        task.delay(delay, function()
+            tw(p, {BackgroundTransparency = p:GetAttribute("_xOrigBT") or 0}, 0.3)
+            for _, d in p:GetDescendants() do
+                if d:IsA("TextLabel") or d:IsA("TextButton") then
+                    tw(d, {TextTransparency = d:GetAttribute("_xOrigTT") or 0}, 0.3)
+                elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
+                    tw(d, {BackgroundTransparency = d:GetAttribute("_xOrigBT") or 0}, 0.3)
+                end
+                if d:IsA("ScrollingFrame") then
+                    tw(d, {ScrollBarImageTransparency = d:GetAttribute("_xOrigSB") or 0.3}, 0.3)
+                end
+                if d:IsA("UIStroke") then
+                    tw(d, {Transparency = d:GetAttribute("_xOrigST") or 0}, 0.3)
+                end
+            end
+        end)
+    end
+
     -- Toggle UI keybind
     UIS.InputBegan:Connect(function(input, gpe)
         if gpe then return end
@@ -294,9 +350,20 @@ function XiroLib:CreateWindow(config)
             if uiVisible then
                 panelContainer.Visible = true
                 unlockMouse()
+                for i, p in ipairs(panels) do
+                    fadeInPanel(p, (i - 1) * FADE_STAGGER)
+                end
             else
-                panelContainer.Visible = false
-                restoreMouse()
+                for i, p in ipairs(panels) do
+                    saveOrigTransparency(p)
+                    fadeOutPanel(p, (i - 1) * 0.03)
+                end
+                task.delay(0.25, function()
+                    if not uiVisible then
+                        panelContainer.Visible = false
+                        restoreMouse()
+                    end
+                end)
             end
         end
     end)
@@ -352,6 +419,10 @@ function XiroLib:CreateWindow(config)
         loadScreen:Destroy()
         panelContainer.Visible = true
         unlockMouse()
+        for i, p in ipairs(panels) do
+            saveOrigTransparency(p)
+            for _, d in p:GetDescendants() do saveOrigTransparency(d) end
+        end
     end)
 
     --======================================================
