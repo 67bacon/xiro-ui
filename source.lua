@@ -26,7 +26,7 @@ local C = {
     Accent      = Color3.fromRGB(140, 100, 255),
     AccentDark  = Color3.fromRGB(100, 70, 200),
     ToggleOn    = Color3.fromRGB(140, 100, 255),
-    ToggleOff   = Color3.fromRGB(55, 55, 68),
+    ToggleOff   = Color3.fromRGB(70, 70, 85),
     SliderFill  = Color3.fromRGB(140, 100, 255),
     SliderBG    = Color3.fromRGB(42, 42, 54),
     SectionText = Color3.fromRGB(110, 100, 160),
@@ -656,24 +656,25 @@ function XiroLib:CreateWindow(config)
                 label.Parent = frame
 
                 local indicator = Instance.new("Frame")
-                indicator.Size = UDim2.new(0, 32, 0, 16)
-                indicator.Position = UDim2.new(1, -40, 0.5, -8)
+                indicator.Size = UDim2.new(0, 36, 0, 18)
+                indicator.Position = UDim2.new(1, -44, 0.5, -9)
                 indicator.BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff
                 indicator.BorderSizePixel = 0
                 indicator.Parent = frame
-                addCorner(indicator, 8)
+                addCorner(indicator, 9)
+                addStroke(indicator, 1, C.Border)
 
                 local dot = Instance.new("Frame")
-                dot.Size = UDim2.new(0, 12, 0, 12)
-                dot.Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+                dot.Size = UDim2.new(0, 14, 0, 14)
+                dot.Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
                 dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 dot.BorderSizePixel = 0
                 dot.Parent = indicator
-                addCorner(dot, 6)
+                addCorner(dot, 7)
 
                 local function updateVisual()
                     tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
-                    tw(dot, {Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)}, 0.15)
+                    tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
                 end
 
                 local btn = Instance.new("TextButton")
@@ -1140,24 +1141,25 @@ function XiroLib:CreateWindow(config)
 
             -- Toggle indicator (pill shape)
             local indicator = Instance.new("Frame")
-            indicator.Size = UDim2.new(0, 32, 0, 16)
-            indicator.Position = UDim2.new(1, -40, 0.5, -8)
+            indicator.Size = UDim2.new(0, 36, 0, 18)
+            indicator.Position = UDim2.new(1, -44, 0.5, -9)
             indicator.BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff
             indicator.BorderSizePixel = 0
             indicator.Parent = frame
-            addCorner(indicator, 8)
+            addCorner(indicator, 9)
+            addStroke(indicator, 1, C.Border)
 
             local dot = Instance.new("Frame")
-            dot.Size = UDim2.new(0, 12, 0, 12)
-            dot.Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+            dot.Size = UDim2.new(0, 14, 0, 14)
+            dot.Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
             dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             dot.BorderSizePixel = 0
             dot.Parent = indicator
-            addCorner(dot, 6)
+            addCorner(dot, 7)
 
             local function updateVisual()
                 tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
-                tw(dot, {Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)}, 0.15)
+                tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
             end
 
             -- Click area
