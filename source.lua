@@ -266,10 +266,11 @@ function XiroLib:CreateWindow(config)
     end
 
     -- Panel container
-    panelContainer = Instance.new("Frame")
+    panelContainer = Instance.new("CanvasGroup")
     panelContainer.Name = "Panels"
     panelContainer.Size = UDim2.new(1, 0, 1, 0)
     panelContainer.BackgroundTransparency = 1
+    panelContainer.GroupTransparency = 0
     panelContainer.Parent = screenGui
 
     -- Notification container
@@ -293,46 +294,12 @@ function XiroLib:CreateWindow(config)
             uiVisible = not uiVisible
             if uiVisible then
                 panelContainer.Visible = true
+                panelContainer.GroupTransparency = 1
                 unlockMouse()
-                -- Stagger fade-in panels
-                for i, p in ipairs(panels) do
-                    p.BackgroundTransparency = 1
-                    for _, d in p:GetDescendants() do
-                        if d:IsA("GuiObject") then d.Visible = true end
-                    end
-                    task.delay((i - 1) * FADE_STAGGER, function()
-                        tw(p, {BackgroundTransparency = 0}, 0.3)
-                        for _, d in p:GetDescendants() do
-                            if d:IsA("TextLabel") or d:IsA("TextButton") then
-                                tw(d, {TextTransparency = 0}, 0.3)
-                            end
-                            if d:IsA("Frame") and d.BackgroundTransparency > 0 then
-                                -- skip transparent frames
-                            elseif d:IsA("Frame") then
-                                tw(d, {BackgroundTransparency = 0}, 0.3)
-                            end
-                        end
-                    end)
-                end
+                tw(panelContainer, {GroupTransparency = 0}, 0.25)
             else
-                -- Fade out all panels
-                for i, p in ipairs(panels) do
-                    task.delay((i - 1) * 0.03, function()
-                        tw(p, {BackgroundTransparency = 1}, 0.2)
-                        for _, d in p:GetDescendants() do
-                            if d:IsA("TextLabel") or d:IsA("TextButton") then
-                                tw(d, {TextTransparency = 1}, 0.2)
-                            elseif d:IsA("Frame") then
-                                tw(d, {BackgroundTransparency = 1}, 0.2)
-                            elseif d:IsA("ScrollingFrame") then
-                                tw(d, {ScrollBarImageTransparency = 1}, 0.2)
-                            elseif d:IsA("UIStroke") then
-                                tw(d, {Transparency = 1}, 0.2)
-                            end
-                        end
-                    end)
-                end
-                task.delay(0.25, function()
+                local fadeTween = tw(panelContainer, {GroupTransparency = 1}, 0.2)
+                fadeTween.Completed:Connect(function()
                     if not uiVisible then
                         panelContainer.Visible = false
                         restoreMouse()
@@ -391,20 +358,10 @@ function XiroLib:CreateWindow(config)
         tw(accentLine, {BackgroundTransparency = 1}, 0.4)
         task.wait(0.4)
         loadScreen:Destroy()
+        panelContainer.GroupTransparency = 1
         panelContainer.Visible = true
         unlockMouse()
-        -- Stagger fade-in each panel
-        for i, p in ipairs(panels) do
-            p.BackgroundTransparency = 1
-            task.delay((i - 1) * FADE_STAGGER + 0.05, function()
-                tw(p, {BackgroundTransparency = 0}, 0.35)
-                for _, d in p:GetDescendants() do
-                    if d:IsA("TextLabel") or d:IsA("TextButton") then
-                        tw(d, {TextTransparency = 0}, 0.35)
-                    end
-                end
-            end)
-        end
+        tw(panelContainer, {GroupTransparency = 0}, 0.35)
     end)
 
     --======================================================
