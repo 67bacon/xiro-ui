@@ -266,11 +266,10 @@ function XiroLib:CreateWindow(config)
     end
 
     -- Panel container
-    panelContainer = Instance.new("CanvasGroup")
+    panelContainer = Instance.new("Frame")
     panelContainer.Name = "Panels"
     panelContainer.Size = UDim2.new(1, 0, 1, 0)
     panelContainer.BackgroundTransparency = 1
-    panelContainer.GroupTransparency = 0
     panelContainer.Parent = screenGui
 
     -- Notification container
@@ -294,17 +293,10 @@ function XiroLib:CreateWindow(config)
             uiVisible = not uiVisible
             if uiVisible then
                 panelContainer.Visible = true
-                panelContainer.GroupTransparency = 1
                 unlockMouse()
-                tw(panelContainer, {GroupTransparency = 0}, 0.25)
             else
-                local fadeTween = tw(panelContainer, {GroupTransparency = 1}, 0.2)
-                fadeTween.Completed:Connect(function()
-                    if not uiVisible then
-                        panelContainer.Visible = false
-                        restoreMouse()
-                    end
-                end)
+                panelContainer.Visible = false
+                restoreMouse()
             end
         end
     end)
@@ -358,10 +350,8 @@ function XiroLib:CreateWindow(config)
         tw(accentLine, {BackgroundTransparency = 1}, 0.4)
         task.wait(0.4)
         loadScreen:Destroy()
-        panelContainer.GroupTransparency = 1
         panelContainer.Visible = true
         unlockMouse()
-        tw(panelContainer, {GroupTransparency = 0}, 0.35)
     end)
 
     --======================================================
