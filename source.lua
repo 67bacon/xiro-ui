@@ -814,10 +814,14 @@ function XiroLib:CreateWindow(config)
                 dragArea.Text = ""
                 dragArea.Parent = frame
 
-                local function updateSlider(newVal)
+                local function updateSlider(newVal, animate)
                     value = snapVal(newVal, mn, mx, inc)
                     local pct = (value - mn) / math.max(mx - mn, 0.001)
-                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    if animate then
+                        tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.12)
+                    else
+                        barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    end
                     local display
                     if inc >= 1 then display = tostring(math.round(value))
                     else local decimals = math.max(0, math.ceil(-math.log10(inc))); display = string.format("%." .. decimals .. "f", value) end
@@ -834,7 +838,7 @@ function XiroLib:CreateWindow(config)
                         local absPos = barBG.AbsolutePosition.X
                         local absSize = barBG.AbsoluteSize.X
                         local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                        updateSlider(mn + relX * (mx - mn))
+                        updateSlider(mn + relX * (mx - mn), false)
                     end
                 end)
                 dragArea.MouseButton1Click:Connect(function()
@@ -842,7 +846,7 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                    updateSlider(mn + relX * (mx - mn))
+                    updateSlider(mn + relX * (mx - mn), true)
                 end)
 
                 frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
@@ -1089,7 +1093,11 @@ function XiroLib:CreateWindow(config)
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.TextWrapped = true
                 label.Parent = frame
-                return {}
+                local labelObj = {}
+                function labelObj:Set(newText)
+                    label.Text = newText or ""
+                end
+                return labelObj
             end
 
             function Acc:CreateSection(sectionName)
@@ -1316,11 +1324,14 @@ function XiroLib:CreateWindow(config)
             dragArea.Text = ""
             dragArea.Parent = frame
 
-            local function updateSlider(newVal)
+            local function updateSlider(newVal, animate)
                 value = snapVal(newVal, mn, mx, inc)
                 local pct = (value - mn) / math.max(mx - mn, 0.001)
-                barFill.Size = UDim2.new(pct, 0, 1, 0)
-                -- Format value display
+                if animate then
+                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.12)
+                else
+                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                end
                 local display
                 if inc >= 1 then
                     display = tostring(math.round(value))
@@ -1350,18 +1361,16 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                    local newVal = mn + relX * (mx - mn)
-                    updateSlider(newVal)
+                    updateSlider(mn + relX * (mx - mn), false)
                 end
             end)
 
-            -- Click to set
             dragArea.MouseButton1Click:Connect(function()
                 local mouse = UIS:GetMouseLocation()
                 local absPos = barBG.AbsolutePosition.X
                 local absSize = barBG.AbsoluteSize.X
                 local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                updateSlider(mn + relX * (mx - mn))
+                updateSlider(mn + relX * (mx - mn), true)
             end)
 
             frame.MouseEnter:Connect(function()
@@ -1669,7 +1678,11 @@ function XiroLib:CreateWindow(config)
             label.TextWrapped = true
             label.Parent = frame
 
-            return {}
+            local labelObj = {}
+            function labelObj:Set(newText)
+                label.Text = newText or ""
+            end
+            return labelObj
         end
 
         ---- CREATE KEYBIND ----
