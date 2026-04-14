@@ -814,10 +814,14 @@ function XiroLib:CreateWindow(config)
                 dragArea.Text = ""
                 dragArea.Parent = frame
 
-                local function updateSlider(newVal)
+                local function updateSlider(newVal, animate)
                     value = snapVal(newVal, mn, mx, inc)
                     local pct = (value - mn) / math.max(mx - mn, 0.001)
-                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.08)
+                    if animate then
+                        tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.08)
+                    else
+                        barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    end
                     local display
                     if inc >= 1 then display = tostring(math.round(value))
                     else local decimals = math.max(0, math.ceil(-math.log10(inc))); display = string.format("%." .. decimals .. "f", value) end
@@ -827,14 +831,21 @@ function XiroLib:CreateWindow(config)
                 end
 
                 local sliding = false
-                dragArea.MouseButton1Down:Connect(function() sliding = true end)
+                dragArea.MouseButton1Down:Connect(function()
+                    sliding = true
+                    local absPos = barBG.AbsolutePosition.X
+                    local absSize = barBG.AbsoluteSize.X
+                    local mouse = UIS:GetMouseLocation()
+                    local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
+                    updateSlider(mn + relX * (mx - mn), false)
+                end)
                 UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
                 UIS.InputChanged:Connect(function(input)
                     if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
                         local absPos = barBG.AbsolutePosition.X
                         local absSize = barBG.AbsoluteSize.X
                         local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                        updateSlider(mn + relX * (mx - mn))
+                        updateSlider(mn + relX * (mx - mn), false)
                     end
                 end)
                 dragArea.MouseButton1Click:Connect(function()
@@ -842,7 +853,7 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                    updateSlider(mn + relX * (mx - mn))
+                    updateSlider(mn + relX * (mx - mn), true)
                 end)
 
                 frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
@@ -851,7 +862,7 @@ function XiroLib:CreateWindow(config)
                 local sliderObj = {}
                 sliderObj.CurrentValue = value
                 function sliderObj:Set(val)
-                    if type(val) == "number" then updateSlider(val); sliderObj.CurrentValue = value end
+                    if type(val) == "number" then updateSlider(val, true); sliderObj.CurrentValue = value end
                 end
                 if flag then registerFlag(flag, value, function(val) sliderObj:Set(val) end) end
                 return sliderObj
@@ -1320,10 +1331,14 @@ function XiroLib:CreateWindow(config)
             dragArea.Text = ""
             dragArea.Parent = frame
 
-            local function updateSlider(newVal)
+            local function updateSlider(newVal, animate)
                 value = snapVal(newVal, mn, mx, inc)
                 local pct = (value - mn) / math.max(mx - mn, 0.001)
-                tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.08)
+                if animate then
+                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.08)
+                else
+                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                end
                 local display
                 if inc >= 1 then
                     display = tostring(math.round(value))
@@ -1340,6 +1355,11 @@ function XiroLib:CreateWindow(config)
 
             dragArea.MouseButton1Down:Connect(function()
                 sliding = true
+                local absPos = barBG.AbsolutePosition.X
+                local absSize = barBG.AbsoluteSize.X
+                local mouse = UIS:GetMouseLocation()
+                local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
+                updateSlider(mn + relX * (mx - mn), false)
             end)
 
             UIS.InputEnded:Connect(function(input)
@@ -1353,7 +1373,7 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                    updateSlider(mn + relX * (mx - mn))
+                    updateSlider(mn + relX * (mx - mn), false)
                 end
             end)
 
@@ -1362,7 +1382,7 @@ function XiroLib:CreateWindow(config)
                 local absPos = barBG.AbsolutePosition.X
                 local absSize = barBG.AbsoluteSize.X
                 local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                updateSlider(mn + relX * (mx - mn))
+                updateSlider(mn + relX * (mx - mn), true)
             end)
 
             frame.MouseEnter:Connect(function()
@@ -1377,7 +1397,7 @@ function XiroLib:CreateWindow(config)
 
             function sliderObj:Set(val)
                 if type(val) == "number" then
-                    updateSlider(val)
+                    updateSlider(val, true)
                     sliderObj.CurrentValue = value
                 end
             end
