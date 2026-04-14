@@ -66,6 +66,8 @@ local configFile      = ""
 local uiVisible       = true
 local toggleKeybind   = Enum.KeyCode.RightShift
 local openDropdown    = nil -- currently open dropdown closer
+local savedMouseBehavior = nil
+local FADE_STAGGER    = 0.06 -- stagger delay between panel fade-ins
 
 ---------- UTILITIES ----------
 
@@ -155,6 +157,54 @@ local function updateFlag(flag, value)
     saveConfig()
 end
 
+---------- ELEMENT FADE-IN HELPER ----------
+
+local function fadeInElement(frame, delay)
+    frame.BackgroundTransparency = 1
+    for _, child in frame:GetDescendants() do
+        if child:IsA("TextLabel") or child:IsA("TextButton") then
+            child.TextTransparency = 1
+        end
+        if child:IsA("GuiObject") and not child:IsA("UICorner") and not child:IsA("UIStroke") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+            if child.BackgroundTransparency < 1 then
+                local target = child.BackgroundTransparency
+                child.BackgroundTransparency = 1
+                task.delay(delay or 0, function()
+                    tw(child, {BackgroundTransparency = target}, 0.25)
+                end)
+            end
+        end
+    end
+    task.delay(delay or 0, function()
+        tw(frame, {BackgroundTransparency = 0}, 0.25)
+        for _, child in frame:GetDescendants() do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                tw(child, {TextTransparency = 0}, 0.25)
+            end
+        end
+    end)
+end
+
+---------- MOUSE CONTROL ----------
+
+local function unlockMouse()
+    pcall(function()
+        savedMouseBehavior = UIS.MouseBehavior
+        UIS.MouseBehavior = Enum.MouseBehavior.Default
+        UIS.MouseIconEnabled = true
+    end)
+end
+
+local function restoreMouse()
+    pcall(function()
+        if savedMouseBehavior then
+            UIS.MouseBehavior = savedMouseBehavior
+        else
+            UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+        end
+    end)
+end
+
 ---------- CLOSE OPEN DROPDOWN ----------
 
 local function closeOpenDropdown()
@@ -240,7 +290,54 @@ function XiroLib:CreateWindow(config)
         if gpe then return end
         if input.KeyCode == toggleKeybind then
             uiVisible = not uiVisible
-            panelContainer.Visible = uiVisible
+            if uiVisible then
+                panelContainer.Visible = true
+                unlockMouse()
+                -- Stagger fade-in panels
+                for i, p in ipairs(panels) do
+                    p.BackgroundTransparency = 1
+                    for _, d in p:GetDescendants() do
+                        if d:IsA("GuiObject") then d.Visible = true end
+                    end
+                    task.delay((i - 1) * FADE_STAGGER, function()
+                        tw(p, {BackgroundTransparency = 0}, 0.3)
+                        for _, d in p:GetDescendants() do
+                            if d:IsA("TextLabel") or d:IsA("TextButton") then
+                                tw(d, {TextTransparency = 0}, 0.3)
+                            end
+                            if d:IsA("Frame") and d.BackgroundTransparency > 0 then
+                                -- skip transparent frames
+                            elseif d:IsA("Frame") then
+                                tw(d, {BackgroundTransparency = 0}, 0.3)
+                            end
+                        end
+                    end)
+                end
+            else
+                -- Fade out all panels
+                for i, p in ipairs(panels) do
+                    task.delay((i - 1) * 0.03, function()
+                        tw(p, {BackgroundTransparency = 1}, 0.2)
+                        for _, d in p:GetDescendants() do
+                            if d:IsA("TextLabel") or d:IsA("TextButton") then
+                                tw(d, {TextTransparency = 1}, 0.2)
+                            elseif d:IsA("Frame") then
+                                tw(d, {BackgroundTransparency = 1}, 0.2)
+                            elseif d:IsA("ScrollingFrame") then
+                                tw(d, {ScrollBarImageTransparency = 1}, 0.2)
+                            elseif d:IsA("UIStroke") then
+                                tw(d, {Transparency = 1}, 0.2)
+                            end
+                        end
+                    end)
+                end
+                task.delay(0.25, function()
+                    if not uiVisible then
+                        panelContainer.Visible = false
+                        restoreMouse()
+                    end
+                end)
+            end
         end
     end)
 
@@ -294,6 +391,19 @@ function XiroLib:CreateWindow(config)
         task.wait(0.4)
         loadScreen:Destroy()
         panelContainer.Visible = true
+        unlockMouse()
+        -- Stagger fade-in each panel
+        for i, p in ipairs(panels) do
+            p.BackgroundTransparency = 1
+            task.delay((i - 1) * FADE_STAGGER + 0.05, function()
+                tw(p, {BackgroundTransparency = 0}, 0.35)
+                for _, d in p:GetDescendants() do
+                    if d:IsA("TextLabel") or d:IsA("TextButton") then
+                        tw(d, {TextTransparency = 0}, 0.35)
+                    end
+                end
+            end)
+        end
     end)
 
     --======================================================
@@ -465,6 +575,7 @@ function XiroLib:CreateWindow(config)
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
             addCorner(frame, CORNER_SM)
+            addStroke(frame, 1, C.Border)
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -48, 1, 0)
@@ -563,6 +674,7 @@ function XiroLib:CreateWindow(config)
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
             addCorner(frame, CORNER_SM)
+            addStroke(frame, 1, C.Border)
 
             -- Top row: name + value
             local label = Instance.new("TextLabel")
@@ -711,6 +823,7 @@ function XiroLib:CreateWindow(config)
             mainRow.BorderSizePixel = 0
             mainRow.Parent = container
             addCorner(mainRow, CORNER_SM)
+            addStroke(mainRow, 1, C.Border)
 
             local nameLabel = Instance.new("TextLabel")
             nameLabel.Size = UDim2.new(0.45, -8, 1, 0)
@@ -897,6 +1010,7 @@ function XiroLib:CreateWindow(config)
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
             addCorner(frame, CORNER_SM)
+            addStroke(frame, 1, C.Border)
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -20, 1, 0)
