@@ -251,6 +251,8 @@ function XiroLib:CreateWindow(config)
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
+    pcall(function() screenGui:SetAttribute("LocalizationMatchIdentifier", "") end)
+    pcall(function() screenGui.AutoLocalize = false end)
     pcall(function()
         if gethui then
             screenGui.Parent = gethui()
