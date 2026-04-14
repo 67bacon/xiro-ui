@@ -42,6 +42,7 @@ local ELEM_H       = 30
 local SLIDER_H     = 44
 local DROPDOWN_H   = 30
 local SECTION_H    = 24
+local ACCORDION_H  = 28
 local PAD           = 6
 local GAP           = 3
 local CORNER_R      = 6
@@ -530,6 +531,554 @@ function XiroLib:CreateWindow(config)
         local function nextOrder()
             elemOrder = elemOrder + 1
             return elemOrder
+        end
+
+        ---- CREATE ACCORDION ----
+        function Tab:CreateAccordion(accordionName)
+            local isExpanded = false
+
+            -- Container frame (auto-sizes based on content)
+            local container = Instance.new("Frame")
+            container.Name = "Accordion_" .. (accordionName or "")
+            container.AutomaticSize = Enum.AutomaticSize.Y
+            container.Size = UDim2.new(1, 0, 0, 0)
+            container.BackgroundTransparency = 1
+            container.LayoutOrder = nextOrder()
+            container.ClipsDescendants = false
+            container.Parent = scrollFrame
+
+            local containerLayout = Instance.new("UIListLayout")
+            containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            containerLayout.Padding = UDim.new(0, GAP)
+            containerLayout.Parent = container
+
+            -- Header row
+            local header = Instance.new("Frame")
+            header.Name = "Header"
+            header.Size = UDim2.new(1, 0, 0, ACCORDION_H)
+            header.BackgroundColor3 = C.TitleBar
+            header.BorderSizePixel = 0
+            header.LayoutOrder = 0
+            header.Parent = container
+            addCorner(header, CORNER_SM)
+            addStroke(header, 1, C.AccentDark)
+
+            local arrow = Instance.new("TextLabel")
+            arrow.Size = UDim2.new(0, 20, 1, 0)
+            arrow.Position = UDim2.new(0, 6, 0, 0)
+            arrow.BackgroundTransparency = 1
+            arrow.Text = "▶"
+            arrow.TextColor3 = C.Accent
+            arrow.Font = FONT
+            arrow.TextSize = 9
+            arrow.Parent = header
+
+            local headerLabel = Instance.new("TextLabel")
+            headerLabel.Size = UDim2.new(1, -30, 1, 0)
+            headerLabel.Position = UDim2.new(0, 24, 0, 0)
+            headerLabel.BackgroundTransparency = 1
+            headerLabel.Text = accordionName or "Section"
+            headerLabel.TextColor3 = C.Accent
+            headerLabel.Font = FONT_SEMI
+            headerLabel.TextSize = FSIZE
+            headerLabel.TextXAlignment = Enum.TextXAlignment.Left
+            headerLabel.Parent = header
+
+            -- Content frame (holds child elements, hidden by default)
+            local content = Instance.new("Frame")
+            content.Name = "Content"
+            content.AutomaticSize = Enum.AutomaticSize.Y
+            content.Size = UDim2.new(1, 0, 0, 0)
+            content.BackgroundTransparency = 1
+            content.Visible = false
+            content.LayoutOrder = 1
+            content.Parent = container
+
+            local contentInnerLayout = Instance.new("UIListLayout")
+            contentInnerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            contentInnerLayout.Padding = UDim.new(0, GAP)
+            contentInnerLayout.Parent = content
+
+            -- Toggle expand/collapse
+            local headerBtn = Instance.new("TextButton")
+            headerBtn.Size = UDim2.new(1, 0, 1, 0)
+            headerBtn.BackgroundTransparency = 1
+            headerBtn.Text = ""
+            headerBtn.Parent = header
+
+            headerBtn.MouseButton1Click:Connect(function()
+                isExpanded = not isExpanded
+                content.Visible = isExpanded
+                arrow.Text = isExpanded and "▼" or "▶"
+                tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.12)
+            end)
+
+            headerBtn.MouseEnter:Connect(function()
+                tw(header, {BackgroundColor3 = C.ElemHover}, 0.1)
+            end)
+            headerBtn.MouseLeave:Connect(function()
+                tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.1)
+            end)
+
+            -- Accordion child API (mirrors Tab API, parents into content frame)
+            local Acc = {}
+            local accOrder = 0
+            local function accNextOrder()
+                accOrder = accOrder + 1
+                return accOrder
+            end
+
+            function Acc:CreateToggle(cfg)
+                cfg = cfg or {}
+                local enabled = cfg.CurrentValue or false
+                local flag = cfg.Flag
+
+                local frame = Instance.new("Frame")
+                frame.Name = "Toggle_" .. (cfg.Name or "")
+                frame.Size = UDim2.new(1, 0, 0, ELEM_H)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+                addStroke(frame, 1, C.Border)
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, -48, 1, 0)
+                label.Position = UDim2.new(0, 10, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = cfg.Name or "Toggle"
+                label.TextColor3 = C.Text
+                label.Font = FONT
+                label.TextSize = FSIZE
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.TextTruncate = Enum.TextTruncate.AtEnd
+                label.Parent = frame
+
+                local indicator = Instance.new("Frame")
+                indicator.Size = UDim2.new(0, 32, 0, 16)
+                indicator.Position = UDim2.new(1, -40, 0.5, -8)
+                indicator.BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff
+                indicator.BorderSizePixel = 0
+                indicator.Parent = frame
+                addCorner(indicator, 8)
+
+                local dot = Instance.new("Frame")
+                dot.Size = UDim2.new(0, 12, 0, 12)
+                dot.Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+                dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                dot.BorderSizePixel = 0
+                dot.Parent = indicator
+                addCorner(dot, 6)
+
+                local function updateVisual()
+                    tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
+                    tw(dot, {Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)}, 0.15)
+                end
+
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, 0, 1, 0)
+                btn.BackgroundTransparency = 1
+                btn.Text = ""
+                btn.Parent = frame
+
+                btn.MouseButton1Click:Connect(function()
+                    enabled = not enabled
+                    updateVisual()
+                    if flag then updateFlag(flag, enabled) end
+                    if cfg.Callback then task.spawn(cfg.Callback, enabled) end
+                end)
+
+                btn.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
+                btn.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.1) end)
+
+                local toggleObj = {}
+                toggleObj.CurrentValue = enabled
+                function toggleObj:Set(val)
+                    if type(val) == "boolean" then
+                        enabled = val
+                        toggleObj.CurrentValue = val
+                        updateVisual()
+                        if flag then updateFlag(flag, enabled) end
+                        if cfg.Callback then task.spawn(cfg.Callback, enabled) end
+                    end
+                end
+                if flag then registerFlag(flag, enabled, function(val) toggleObj:Set(val) end) end
+                return toggleObj
+            end
+
+            function Acc:CreateSlider(cfg)
+                cfg = cfg or {}
+                local mn = cfg.Range and cfg.Range[1] or 0
+                local mx = cfg.Range and cfg.Range[2] or 100
+                local inc = cfg.Increment or 1
+                local suffix = cfg.Suffix or ""
+                local value = cfg.CurrentValue or mn
+                local flag = cfg.Flag
+                value = snapVal(value, mn, mx, inc)
+
+                local frame = Instance.new("Frame")
+                frame.Name = "Slider_" .. (cfg.Name or "")
+                frame.Size = UDim2.new(1, 0, 0, SLIDER_H)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+                addStroke(frame, 1, C.Border)
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(0.65, -10, 0, 18)
+                label.Position = UDim2.new(0, 10, 0, 4)
+                label.BackgroundTransparency = 1
+                label.Text = cfg.Name or "Slider"
+                label.TextColor3 = C.Text
+                label.Font = FONT
+                label.TextSize = FSIZE
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.TextTruncate = Enum.TextTruncate.AtEnd
+                label.Parent = frame
+
+                local valLabel = Instance.new("TextLabel")
+                valLabel.Size = UDim2.new(0.35, -10, 0, 18)
+                valLabel.Position = UDim2.new(0.65, 0, 0, 4)
+                valLabel.BackgroundTransparency = 1
+                valLabel.Text = tostring(value) .. suffix
+                valLabel.TextColor3 = C.Accent
+                valLabel.Font = FONT_SEMI
+                valLabel.TextSize = FSIZE
+                valLabel.TextXAlignment = Enum.TextXAlignment.Right
+                valLabel.Parent = frame
+
+                local barBG = Instance.new("Frame")
+                barBG.Size = UDim2.new(1, -20, 0, 6)
+                barBG.Position = UDim2.new(0, 10, 0, 28)
+                barBG.BackgroundColor3 = C.SliderBG
+                barBG.BorderSizePixel = 0
+                barBG.Parent = frame
+                addCorner(barBG, 3)
+
+                local barFill = Instance.new("Frame")
+                barFill.Size = UDim2.new((value - mn) / (mx - mn), 0, 1, 0)
+                barFill.BackgroundColor3 = C.SliderFill
+                barFill.BorderSizePixel = 0
+                barFill.Parent = barBG
+                addCorner(barFill, 3)
+
+                local dragArea = Instance.new("TextButton")
+                dragArea.Size = UDim2.new(1, 0, 0, 18)
+                dragArea.Position = UDim2.new(0, 0, 0, 22)
+                dragArea.BackgroundTransparency = 1
+                dragArea.Text = ""
+                dragArea.Parent = frame
+
+                local function updateSlider(newVal)
+                    value = snapVal(newVal, mn, mx, inc)
+                    local pct = (value - mn) / math.max(mx - mn, 0.001)
+                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    local display
+                    if inc >= 1 then display = tostring(math.round(value))
+                    else local decimals = math.max(0, math.ceil(-math.log10(inc))); display = string.format("%." .. decimals .. "f", value) end
+                    valLabel.Text = display .. suffix
+                    if flag then updateFlag(flag, value) end
+                    if cfg.Callback then task.spawn(cfg.Callback, value) end
+                end
+
+                local sliding = false
+                dragArea.MouseButton1Down:Connect(function() sliding = true end)
+                UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
+                UIS.InputChanged:Connect(function(input)
+                    if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        local absPos = barBG.AbsolutePosition.X
+                        local absSize = barBG.AbsoluteSize.X
+                        local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
+                        updateSlider(mn + relX * (mx - mn))
+                    end
+                end)
+                dragArea.MouseButton1Click:Connect(function()
+                    local mouse = UIS:GetMouseLocation()
+                    local absPos = barBG.AbsolutePosition.X
+                    local absSize = barBG.AbsoluteSize.X
+                    local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
+                    updateSlider(mn + relX * (mx - mn))
+                end)
+
+                frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
+                frame.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.1) end)
+
+                local sliderObj = {}
+                sliderObj.CurrentValue = value
+                function sliderObj:Set(val)
+                    if type(val) == "number" then updateSlider(val); sliderObj.CurrentValue = value end
+                end
+                if flag then registerFlag(flag, value, function(val) sliderObj:Set(val) end) end
+                return sliderObj
+            end
+
+            function Acc:CreateDropdown(cfg)
+                cfg = cfg or {}
+                local options = cfg.Options or {}
+                local multi = cfg.MultipleOptions or false
+                local current = cfg.CurrentOption or (options[1] and {options[1]} or {})
+                local flag = cfg.Flag
+                local isOpen = false
+
+                local ddContainer = Instance.new("Frame")
+                ddContainer.Name = "Dropdown_" .. (cfg.Name or "")
+                ddContainer.AutomaticSize = Enum.AutomaticSize.Y
+                ddContainer.Size = UDim2.new(1, 0, 0, 0)
+                ddContainer.BackgroundTransparency = 1
+                ddContainer.LayoutOrder = accNextOrder()
+                ddContainer.ClipsDescendants = false
+                ddContainer.Parent = content
+
+                local mainRow = Instance.new("Frame")
+                mainRow.Size = UDim2.new(1, 0, 0, DROPDOWN_H)
+                mainRow.BackgroundColor3 = C.Elem
+                mainRow.BorderSizePixel = 0
+                mainRow.Parent = ddContainer
+                addCorner(mainRow, CORNER_SM)
+                addStroke(mainRow, 1, C.Border)
+
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.Size = UDim2.new(0.45, -8, 1, 0)
+                nameLabel.Position = UDim2.new(0, 10, 0, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Text = cfg.Name or "Dropdown"
+                nameLabel.TextColor3 = C.Text
+                nameLabel.Font = FONT
+                nameLabel.TextSize = FSIZE
+                nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+                nameLabel.Parent = mainRow
+
+                local valueLabel = Instance.new("TextLabel")
+                valueLabel.Size = UDim2.new(0.55, -28, 1, 0)
+                valueLabel.Position = UDim2.new(0.45, 0, 0, 0)
+                valueLabel.BackgroundTransparency = 1
+                valueLabel.Text = table.concat(current, ", ")
+                valueLabel.TextColor3 = C.Accent
+                valueLabel.Font = FONT
+                valueLabel.TextSize = FSIZE_SMALL
+                valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+                valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
+                valueLabel.Parent = mainRow
+
+                local ddArrow = Instance.new("TextLabel")
+                ddArrow.Size = UDim2.new(0, 20, 1, 0)
+                ddArrow.Position = UDim2.new(1, -22, 0, 0)
+                ddArrow.BackgroundTransparency = 1
+                ddArrow.Text = "▼"
+                ddArrow.TextColor3 = C.SubText
+                ddArrow.Font = FONT
+                ddArrow.TextSize = 9
+                ddArrow.Parent = mainRow
+
+                local optContainer = Instance.new("Frame")
+                optContainer.Name = "Options"
+                optContainer.AutomaticSize = Enum.AutomaticSize.Y
+                optContainer.Size = UDim2.new(1, 0, 0, 0)
+                optContainer.BackgroundTransparency = 1
+                optContainer.Visible = false
+                optContainer.Parent = ddContainer
+
+                local optLayout = Instance.new("UIListLayout")
+                optLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                optLayout.Padding = UDim.new(0, 1)
+                optLayout.Parent = optContainer
+
+                local optPad = Instance.new("UIPadding")
+                optPad.PaddingTop = UDim.new(0, 2)
+                optPad.Parent = optContainer
+
+                local function buildOptions()
+                    for _, child in optContainer:GetChildren() do
+                        if child:IsA("TextButton") then child:Destroy() end
+                    end
+                    for i, opt in ipairs(options) do
+                        local isSelected = table.find(current, opt) ~= nil
+                        local optBtn = Instance.new("TextButton")
+                        optBtn.Size = UDim2.new(1, 0, 0, 24)
+                        optBtn.BackgroundColor3 = isSelected and C.AccentDark or C.Elem
+                        optBtn.BorderSizePixel = 0
+                        optBtn.Text = "  " .. opt
+                        optBtn.TextColor3 = isSelected and C.Text or C.SubText
+                        optBtn.Font = FONT
+                        optBtn.TextSize = FSIZE_SMALL
+                        optBtn.TextXAlignment = Enum.TextXAlignment.Left
+                        optBtn.LayoutOrder = i
+                        optBtn.Parent = optContainer
+                        addCorner(optBtn, CORNER_SM)
+
+                        optBtn.MouseEnter:Connect(function()
+                            if not table.find(current, opt) then tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.08) end
+                        end)
+                        optBtn.MouseLeave:Connect(function()
+                            tw(optBtn, {BackgroundColor3 = (table.find(current, opt) ~= nil) and C.AccentDark or C.Elem}, 0.08)
+                        end)
+                        optBtn.MouseButton1Click:Connect(function()
+                            if multi then
+                                local idx = table.find(current, opt)
+                                if idx then table.remove(current, idx) else table.insert(current, opt) end
+                            else
+                                current = {opt}
+                                isOpen = false
+                                optContainer.Visible = false
+                                ddArrow.Text = "▼"
+                            end
+                            valueLabel.Text = table.concat(current, ", ")
+                            if flag then updateFlag(flag, current) end
+                            if cfg.Callback then task.spawn(cfg.Callback, current) end
+                            buildOptions()
+                        end)
+                    end
+                end
+                buildOptions()
+
+                local mainBtn = Instance.new("TextButton")
+                mainBtn.Size = UDim2.new(1, 0, 1, 0)
+                mainBtn.BackgroundTransparency = 1
+                mainBtn.Text = ""
+                mainBtn.Parent = mainRow
+
+                local function closeThis()
+                    isOpen = false
+                    optContainer.Visible = false
+                    ddArrow.Text = "▼"
+                end
+
+                mainBtn.MouseButton1Click:Connect(function()
+                    if isOpen then
+                        closeThis()
+                        openDropdown = nil
+                    else
+                        closeOpenDropdown()
+                        isOpen = true
+                        optContainer.Visible = true
+                        ddArrow.Text = "▲"
+                        openDropdown = closeThis
+                        buildOptions()
+                    end
+                end)
+
+                mainRow.MouseEnter:Connect(function() tw(mainRow, {BackgroundColor3 = C.ElemHover}, 0.1) end)
+                mainRow.MouseLeave:Connect(function() tw(mainRow, {BackgroundColor3 = C.Elem}, 0.1) end)
+
+                local dropObj = {}
+                dropObj.CurrentOption = current
+                function dropObj:Set(newOptions)
+                    if type(newOptions) == "table" then
+                        current = newOptions
+                        dropObj.CurrentOption = current
+                        valueLabel.Text = table.concat(current, ", ")
+                        if flag then updateFlag(flag, current) end
+                        if cfg.Callback then task.spawn(cfg.Callback, current) end
+                        buildOptions()
+                    end
+                end
+                function dropObj:Refresh(newOptionsList)
+                    if type(newOptionsList) == "table" then options = newOptionsList; buildOptions() end
+                end
+                if flag then registerFlag(flag, current, function(val) dropObj:Set(val) end) end
+                return dropObj
+            end
+
+            function Acc:CreateButton(cfg)
+                cfg = cfg or {}
+                local frame = Instance.new("Frame")
+                frame.Name = "Button_" .. (cfg.Name or "")
+                frame.Size = UDim2.new(1, 0, 0, ELEM_H)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+                addStroke(frame, 1, C.Border)
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, -20, 1, 0)
+                label.Position = UDim2.new(0, 10, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = cfg.Name or "Button"
+                label.TextColor3 = C.Accent
+                label.Font = FONT_SEMI
+                label.TextSize = FSIZE
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.Parent = frame
+
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, 0, 1, 0)
+                btn.BackgroundTransparency = 1
+                btn.Text = ""
+                btn.Parent = frame
+
+                btn.MouseButton1Click:Connect(function()
+                    tw(frame, {BackgroundColor3 = C.Accent}, 0.08)
+                    task.delay(0.15, function() tw(frame, {BackgroundColor3 = C.Elem}, 0.15) end)
+                    if cfg.Callback then task.spawn(cfg.Callback) end
+                end)
+                btn.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
+                btn.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.1) end)
+                return {}
+            end
+
+            function Acc:CreateLabel(text, icon, color, bold)
+                if type(text) == "table" then
+                    local cfg = text
+                    text = cfg.Text or cfg.Name or ""
+                    color = cfg.Color
+                    bold = cfg.Bold
+                end
+                local frame = Instance.new("Frame")
+                frame.Name = "Label"
+                frame.Size = UDim2.new(1, 0, 0, 24)
+                frame.BackgroundTransparency = 1
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, -12, 1, 0)
+                label.Position = UDim2.new(0, 6, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = text or ""
+                label.TextColor3 = color or C.SubText
+                label.Font = bold and FONT_BOLD or FONT
+                label.TextSize = FSIZE_SMALL
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.TextWrapped = true
+                label.Parent = frame
+                return {}
+            end
+
+            function Acc:CreateSection(sectionName)
+                local frame = Instance.new("Frame")
+                frame.Name = "Section"
+                frame.Size = UDim2.new(1, 0, 0, SECTION_H)
+                frame.BackgroundTransparency = 1
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+
+                local line = Instance.new("Frame")
+                line.Size = UDim2.new(1, 0, 0, 1)
+                line.Position = UDim2.new(0, 0, 0.5, 0)
+                line.BackgroundColor3 = C.Border
+                line.BorderSizePixel = 0
+                line.Parent = frame
+
+                local label = Instance.new("TextLabel")
+                label.AutomaticSize = Enum.AutomaticSize.X
+                label.Size = UDim2.new(0, 0, 1, 0)
+                label.Position = UDim2.new(0, 4, 0, 0)
+                label.BackgroundColor3 = C.Panel
+                label.BackgroundTransparency = 0
+                label.Text = "  " .. sectionName .. "  "
+                label.TextColor3 = C.SectionText
+                label.Font = FONT_SEMI
+                label.TextSize = FSIZE_SMALL
+                label.Parent = frame
+            end
+
+            return Acc
         end
 
         ---- CREATE SECTION ----
