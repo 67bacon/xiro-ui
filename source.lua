@@ -581,7 +581,7 @@ function XiroLib:CreateWindow(config)
             header.LayoutOrder = 0
             header.Parent = container
             addCorner(header, CORNER_SM)
-            addStroke(header, 1, C.AccentDark)
+            addStroke(header, 1, C.Border)
 
             local arrow = Instance.new("TextLabel")
             arrow.Size = UDim2.new(0, 20, 1, 0)
