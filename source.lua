@@ -819,7 +819,7 @@ function XiroLib:CreateWindow(config)
                     value = snapVal(newVal, mn, mx, inc)
                     local pct = (value - mn) / math.max(mx - mn, 0.001)
                     if _sliderTw then pcall(function() _sliderTw:Cancel() end) end
-                    _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.06)
+                    _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.18)
                     local display
                     if inc >= 1 then display = tostring(math.round(value))
                     else local decimals = math.max(0, math.ceil(-math.log10(inc))); display = string.format("%." .. decimals .. "f", value) end
@@ -1327,7 +1327,7 @@ function XiroLib:CreateWindow(config)
                 value = snapVal(newVal, mn, mx, inc)
                 local pct = (value - mn) / math.max(mx - mn, 0.001)
                 if _sliderTw then pcall(function() _sliderTw:Cancel() end) end
-                _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.06)
+                _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.18)
                 local display
                 if inc >= 1 then
                     display = tostring(math.round(value))
