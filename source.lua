@@ -808,35 +808,53 @@ function XiroLib:CreateWindow(config)
                 addCorner(barFill, 3)
 
                 local dragArea = Instance.new("TextButton")
-                dragArea.Size = UDim2.new(1, 0, 0, 18)
-                dragArea.Position = UDim2.new(0, 0, 0, 22)
+                dragArea.Size = UDim2.new(1, 0, 1, 0)
+                dragArea.Position = UDim2.new(0, 0, 0, 0)
                 dragArea.BackgroundTransparency = 1
                 dragArea.Text = ""
                 dragArea.Parent = frame
 
-                local _sliderTw = nil
-                local function updateSlider(newVal)
-                    value = snapVal(newVal, mn, mx, inc)
-                    local pct = (value - mn) / math.max(mx - mn, 0.001)
-                    if _sliderTw then pcall(function() _sliderTw:Cancel() end) end
-                    _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.18)
-                    local display
-                    if inc >= 1 then display = tostring(math.round(value))
-                    else local decimals = math.max(0, math.ceil(-math.log10(inc))); display = string.format("%." .. decimals .. "f", value) end
-                    valLabel.Text = display .. suffix
+                local function formatDisplay(v)
+                    if inc >= 1 then return tostring(math.round(v))
+                    else local decimals = math.max(0, math.ceil(-math.log10(inc))); return string.format("%." .. decimals .. "f", v) end
+                end
+
+                local function commitValue(snapped)
+                    value = snapped
+                    valLabel.Text = formatDisplay(value) .. suffix
                     if flag then updateFlag(flag, value) end
                     if cfg.Callback then task.spawn(cfg.Callback, value) end
                 end
 
+                local function updateSlider(newVal)
+                    value = snapVal(newVal, mn, mx, inc)
+                    local pct = (value - mn) / math.max(mx - mn, 0.001)
+                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    commitValue(value)
+                end
+
                 local sliding = false
                 dragArea.MouseButton1Down:Connect(function() sliding = true end)
-                UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
+                UIS.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
+                        sliding = false
+                        local snapped = snapVal(value, mn, mx, inc)
+                        local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                        tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                        commitValue(snapped)
+                    end
+                end)
                 UIS.InputChanged:Connect(function(input)
                     if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
                         local absPos = barBG.AbsolutePosition.X
                         local absSize = barBG.AbsoluteSize.X
                         local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                        updateSlider(mn + relX * (mx - mn))
+                        local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
+                        local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
+                        barFill.Size = UDim2.new(pct, 0, 1, 0)
+                        local display = snapVal(rawVal, mn, mx, inc)
+                        valLabel.Text = formatDisplay(display) .. suffix
+                        value = rawVal
                     end
                 end)
                 dragArea.MouseButton1Click:Connect(function()
@@ -844,7 +862,11 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                    updateSlider(mn + relX * (mx - mn))
+                    local rawVal = mn + relX * (mx - mn)
+                    local snapped = snapVal(rawVal, mn, mx, inc)
+                    local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                    commitValue(snapped)
                 end)
 
                 frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
@@ -1322,22 +1344,23 @@ function XiroLib:CreateWindow(config)
             dragArea.Text = ""
             dragArea.Parent = frame
 
-            local _sliderTw = nil
+            local function formatDisplay(v)
+                if inc >= 1 then return tostring(math.round(v))
+                else local decimals = math.max(0, math.ceil(-math.log10(inc))); return string.format("%." .. decimals .. "f", v) end
+            end
+
+            local function commitValue(snapped)
+                value = snapped
+                valLabel.Text = formatDisplay(value) .. suffix
+                if flag then updateFlag(flag, value) end
+                if cfg.Callback then task.spawn(cfg.Callback, value) end
+            end
+
             local function updateSlider(newVal)
                 value = snapVal(newVal, mn, mx, inc)
                 local pct = (value - mn) / math.max(mx - mn, 0.001)
-                if _sliderTw then pcall(function() _sliderTw:Cancel() end) end
-                _sliderTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.18)
-                local display
-                if inc >= 1 then
-                    display = tostring(math.round(value))
-                else
-                    local decimals = math.max(0, math.ceil(-math.log10(inc)))
-                    display = string.format("%." .. decimals .. "f", value)
-                end
-                valLabel.Text = display .. suffix
-                if flag then updateFlag(flag, value) end
-                if cfg.Callback then task.spawn(cfg.Callback, value) end
+                barFill.Size = UDim2.new(pct, 0, 1, 0)
+                commitValue(value)
             end
 
             local sliding = false
@@ -1347,8 +1370,12 @@ function XiroLib:CreateWindow(config)
             end)
 
             UIS.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
                     sliding = false
+                    local snapped = snapVal(value, mn, mx, inc)
+                    local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                    commitValue(snapped)
                 end
             end)
 
@@ -1357,7 +1384,12 @@ function XiroLib:CreateWindow(config)
                     local absPos = barBG.AbsolutePosition.X
                     local absSize = barBG.AbsoluteSize.X
                     local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                    updateSlider(mn + relX * (mx - mn))
+                    local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
+                    local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
+                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    local display = snapVal(rawVal, mn, mx, inc)
+                    valLabel.Text = formatDisplay(display) .. suffix
+                    value = rawVal
                 end
             end)
 
@@ -1366,7 +1398,11 @@ function XiroLib:CreateWindow(config)
                 local absPos = barBG.AbsolutePosition.X
                 local absSize = barBG.AbsoluteSize.X
                 local relX = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-                updateSlider(mn + relX * (mx - mn))
+                local rawVal = mn + relX * (mx - mn)
+                local snapped = snapVal(rawVal, mn, mx, inc)
+                local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                commitValue(snapped)
             end)
 
             frame.MouseEnter:Connect(function()
