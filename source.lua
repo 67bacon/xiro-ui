@@ -826,10 +826,16 @@ function XiroLib:CreateWindow(config)
                     if cfg.Callback then task.spawn(cfg.Callback, value) end
                 end
 
+                local _slTw = nil
+                local function slideTo(pct, dur)
+                    if _slTw then pcall(function() _slTw:Cancel() end) end
+                    _slTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, dur)
+                end
+
                 local function updateSlider(newVal)
                     value = snapVal(newVal, mn, mx, inc)
                     local pct = (value - mn) / math.max(mx - mn, 0.001)
-                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    slideTo(pct, 0.15)
                     commitValue(value)
                 end
 
@@ -840,7 +846,7 @@ function XiroLib:CreateWindow(config)
                         sliding = false
                         local snapped = snapVal(value, mn, mx, inc)
                         local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                        tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                        slideTo(pct, 0.2)
                         commitValue(snapped)
                     end
                 end)
@@ -851,7 +857,7 @@ function XiroLib:CreateWindow(config)
                         local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
                         local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
                         local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
-                        barFill.Size = UDim2.new(pct, 0, 1, 0)
+                        slideTo(pct, 0.12)
                         local display = snapVal(rawVal, mn, mx, inc)
                         valLabel.Text = formatDisplay(display) .. suffix
                         value = rawVal
@@ -865,7 +871,7 @@ function XiroLib:CreateWindow(config)
                     local rawVal = mn + relX * (mx - mn)
                     local snapped = snapVal(rawVal, mn, mx, inc)
                     local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                    slideTo(pct, 0.2)
                     commitValue(snapped)
                 end)
 
@@ -1338,8 +1344,8 @@ function XiroLib:CreateWindow(config)
 
             -- Drag handle (invisible, full bar area)
             local dragArea = Instance.new("TextButton")
-            dragArea.Size = UDim2.new(1, 0, 0, 18)
-            dragArea.Position = UDim2.new(0, 0, 0, 22)
+            dragArea.Size = UDim2.new(1, 0, 1, 0)
+            dragArea.Position = UDim2.new(0, 0, 0, 0)
             dragArea.BackgroundTransparency = 1
             dragArea.Text = ""
             dragArea.Parent = frame
@@ -1356,10 +1362,16 @@ function XiroLib:CreateWindow(config)
                 if cfg.Callback then task.spawn(cfg.Callback, value) end
             end
 
+            local _slTw = nil
+            local function slideTo(pct, dur)
+                if _slTw then pcall(function() _slTw:Cancel() end) end
+                _slTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, dur)
+            end
+
             local function updateSlider(newVal)
                 value = snapVal(newVal, mn, mx, inc)
                 local pct = (value - mn) / math.max(mx - mn, 0.001)
-                barFill.Size = UDim2.new(pct, 0, 1, 0)
+                slideTo(pct, 0.15)
                 commitValue(value)
             end
 
@@ -1374,7 +1386,7 @@ function XiroLib:CreateWindow(config)
                     sliding = false
                     local snapped = snapVal(value, mn, mx, inc)
                     local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                    tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                    slideTo(pct, 0.2)
                     commitValue(snapped)
                 end
             end)
@@ -1386,7 +1398,7 @@ function XiroLib:CreateWindow(config)
                     local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
                     local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
                     local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
-                    barFill.Size = UDim2.new(pct, 0, 1, 0)
+                    slideTo(pct, 0.12)
                     local display = snapVal(rawVal, mn, mx, inc)
                     valLabel.Text = formatDisplay(display) .. suffix
                     value = rawVal
@@ -1401,7 +1413,7 @@ function XiroLib:CreateWindow(config)
                 local rawVal = mn + relX * (mx - mn)
                 local snapped = snapVal(rawVal, mn, mx, inc)
                 local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
+                slideTo(pct, 0.2)
                 commitValue(snapped)
             end)
 
