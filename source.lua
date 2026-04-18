@@ -660,11 +660,25 @@ function XiroLib:CreateWindow(config)
                             tw(d, {TextTransparency = 0}, 0.25)
                         end
                     end
-                    t.Completed:Connect(function() animating = false end)
+                    t.Completed:Connect(function()
+                        animating = false
+                        -- Unclip after expand so nested dropdowns can overflow/resize cleanly
+                        container.ClipsDescendants = false
+                        container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    end)
                 else
+                    -- Re-enable clipping for collapse animation
+                    container.ClipsDescendants = true
                     -- Slide closed
                     local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
                     t.Completed:Connect(function() animating = false end)
+                end
+            end)
+
+            -- Live-resize accordion when inner content (e.g. dropdown options) grows/shrinks
+            contentInnerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                if isExpanded and not animating then
+                    container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
                 end
             end)
 
