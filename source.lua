@@ -922,10 +922,16 @@ function XiroLib:CreateWindow(config)
                 ddContainer.ClipsDescendants = false
                 ddContainer.Parent = content
 
+                local ddLayout = Instance.new("UIListLayout")
+                ddLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                ddLayout.Padding = UDim.new(0, 0)
+                ddLayout.Parent = ddContainer
+
                 local mainRow = Instance.new("Frame")
                 mainRow.Size = UDim2.new(1, 0, 0, DROPDOWN_H)
                 mainRow.BackgroundColor3 = C.Elem
                 mainRow.BorderSizePixel = 0
+                mainRow.LayoutOrder = 0
                 mainRow.Parent = ddContainer
                 addCorner(mainRow, CORNER_SM)
                 addStroke(mainRow, 1, C.Border)
@@ -971,6 +977,7 @@ function XiroLib:CreateWindow(config)
                 optContainer.Size = UDim2.new(1, 0, 0, 0)
                 optContainer.BackgroundTransparency = 1
                 optContainer.Visible = false
+                optContainer.LayoutOrder = 1
                 optContainer.Parent = ddContainer
 
                 local optLayout = Instance.new("UIListLayout")
@@ -1497,11 +1504,17 @@ function XiroLib:CreateWindow(config)
             container.ClipsDescendants = false
             container.Parent = scrollFrame
 
+            local ddLayout = Instance.new("UIListLayout")
+            ddLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            ddLayout.Padding = UDim.new(0, 0)
+            ddLayout.Parent = container
+
             -- Main row
             local mainRow = Instance.new("Frame")
             mainRow.Size = UDim2.new(1, 0, 0, DROPDOWN_H)
             mainRow.BackgroundColor3 = C.Elem
             mainRow.BorderSizePixel = 0
+            mainRow.LayoutOrder = 0
             mainRow.Parent = container
             addCorner(mainRow, CORNER_SM)
             addStroke(mainRow, 1, C.Border)
@@ -1548,6 +1561,7 @@ function XiroLib:CreateWindow(config)
             optContainer.Size = UDim2.new(1, 0, 0, 0)
             optContainer.BackgroundTransparency = 1
             optContainer.Visible = false
+            optContainer.LayoutOrder = 1
             optContainer.Parent = container
 
             local optLayout = Instance.new("UIListLayout")
