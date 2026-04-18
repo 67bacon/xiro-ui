@@ -218,7 +218,9 @@ end
 ---------- PANEL RESIZE HELPER ----------
 
 local function bindPanelResize(panel, titleBar, scrollFrame, layout)
+    local suppress = false
     local function resize()
+        if suppress then return end
         local contentH = layout.AbsoluteContentSize.Y + PAD * 2
         local visH = math.min(contentH, MAX_PANEL_CONTENT)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentH)
@@ -227,7 +229,8 @@ local function bindPanelResize(panel, titleBar, scrollFrame, layout)
     end
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
     task.defer(resize)
-    return resize
+    local function setSuppress(v) suppress = v end
+    return resize, setSuppress
 end
 
 --==========================================================
@@ -521,7 +524,7 @@ function XiroLib:CreateWindow(config)
         contentPadding.Parent = scrollFrame
 
         -- Auto-resize panel
-        local resizeFn = bindPanelResize(panel, titleBar, scrollFrame, contentLayout)
+        local resizeFn, setResizeSuppress = bindPanelResize(panel, titleBar, scrollFrame, contentLayout)
 
         -- Minimize toggle
         minBtn.MouseButton1Click:Connect(function()
@@ -529,6 +532,7 @@ function XiroLib:CreateWindow(config)
             if minimized then
                 expandedSize = panel.Size
                 tw(minBtn, {Rotation = -90}, 0.18)
+                setResizeSuppress(true)
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H)}, 0.18)
                 task.delay(0.18, function()
                     if minimized then scrollFrame.Visible = false end
@@ -536,10 +540,13 @@ function XiroLib:CreateWindow(config)
             else
                 tw(minBtn, {Rotation = 0}, 0.18)
                 scrollFrame.Visible = true
-                if expandedSize then
-                    tw(panel, {Size = expandedSize}, 0.18)
-                end
-                task.defer(resizeFn)
+                local target = expandedSize or UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
+                setResizeSuppress(true)
+                tw(panel, {Size = target}, 0.22)
+                task.delay(0.24, function()
+                    setResizeSuppress(false)
+                    resizeFn()
+                end)
             end
         end)
 
