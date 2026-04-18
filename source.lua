@@ -488,7 +488,11 @@ function XiroLib:CreateWindow(config)
         minBtn.TextColor3 = C.SubText
         minBtn.Font = FONT
         minBtn.TextSize = 10
+        minBtn.Rotation = 0
         minBtn.Parent = titleBar
+
+        minBtn.MouseEnter:Connect(function() tw(minBtn, {TextColor3 = C.Text}, 0.12) end)
+        minBtn.MouseLeave:Connect(function() tw(minBtn, {TextColor3 = C.SubText}, 0.12) end)
 
         -- Scroll frame (content area)
         local scrollFrame = Instance.new("ScrollingFrame")
@@ -524,14 +528,16 @@ function XiroLib:CreateWindow(config)
             minimized = not minimized
             if minimized then
                 expandedSize = panel.Size
-                minBtn.Text = "▶"
-                scrollFrame.Visible = false
-                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H)}, 0.15)
+                tw(minBtn, {Rotation = -90}, 0.18)
+                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H)}, 0.18)
+                task.delay(0.18, function()
+                    if minimized then scrollFrame.Visible = false end
+                end)
             else
-                minBtn.Text = "▼"
+                tw(minBtn, {Rotation = 0}, 0.18)
                 scrollFrame.Visible = true
                 if expandedSize then
-                    tw(panel, {Size = expandedSize}, 0.15)
+                    tw(panel, {Size = expandedSize}, 0.18)
                 end
                 task.defer(resizeFn)
             end
@@ -591,6 +597,7 @@ function XiroLib:CreateWindow(config)
             arrow.TextColor3 = C.Accent
             arrow.Font = FONT
             arrow.TextSize = 9
+            arrow.Rotation = 0
             arrow.Parent = header
 
             local headerLabel = Instance.new("TextLabel")
@@ -630,7 +637,7 @@ function XiroLib:CreateWindow(config)
                 if animating then return end
                 animating = true
                 isExpanded = not isExpanded
-                arrow.Text = isExpanded and "▼" or "▶"
+                tw(arrow, {Rotation = isExpanded and 90 or 0}, 0.18)
                 tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.12)
 
                 if isExpanded then
@@ -727,6 +734,10 @@ function XiroLib:CreateWindow(config)
                 btn.MouseButton1Click:Connect(function()
                     enabled = not enabled
                     updateVisual()
+                    -- subtle dot pulse
+                    local origSize = dot.Size
+                    tw(dot, {Size = UDim2.new(0, 18, 0, 18), Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
+                    task.delay(0.12, function() tw(dot, {Size = origSize, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12) end)
                     if flag then updateFlag(flag, enabled) end
                     if cfg.Callback then task.spawn(cfg.Callback, enabled) end
                 end)
@@ -944,6 +955,7 @@ function XiroLib:CreateWindow(config)
                 ddArrow.TextColor3 = C.SubText
                 ddArrow.Font = FONT
                 ddArrow.TextSize = 9
+                ddArrow.Rotation = 0
                 ddArrow.Parent = mainRow
 
                 local optContainer = Instance.new("Frame")
@@ -996,7 +1008,7 @@ function XiroLib:CreateWindow(config)
                                 current = {opt}
                                 isOpen = false
                                 optContainer.Visible = false
-                                ddArrow.Text = "▼"
+                                tw(ddArrow, {Rotation = 0}, 0.18)
                             end
                             valueLabel.Text = table.concat(current, ", ")
                             if flag then updateFlag(flag, current) end
@@ -1015,8 +1027,15 @@ function XiroLib:CreateWindow(config)
 
                 local function closeThis()
                     isOpen = false
-                    optContainer.Visible = false
-                    ddArrow.Text = "▼"
+                    tw(ddArrow, {Rotation = 0}, 0.18)
+                    for _, b in optContainer:GetChildren() do
+                        if b:IsA("TextButton") then
+                            tw(b, {BackgroundTransparency = 1, TextTransparency = 1}, 0.12)
+                        end
+                    end
+                    task.delay(0.12, function()
+                        if not isOpen then optContainer.Visible = false end
+                    end)
                 end
 
                 mainBtn.MouseButton1Click:Connect(function()
@@ -1027,9 +1046,16 @@ function XiroLib:CreateWindow(config)
                         closeOpenDropdown()
                         isOpen = true
                         optContainer.Visible = true
-                        ddArrow.Text = "▲"
+                        tw(ddArrow, {Rotation = 180}, 0.18)
                         openDropdown = closeThis
                         buildOptions()
+                        for _, b in optContainer:GetChildren() do
+                            if b:IsA("TextButton") then
+                                b.BackgroundTransparency = 1
+                                b.TextTransparency = 1
+                                tw(b, {BackgroundTransparency = 0, TextTransparency = 0}, 0.18)
+                            end
+                        end
                     end
                 end)
 
@@ -1247,6 +1273,9 @@ function XiroLib:CreateWindow(config)
             btn.MouseButton1Click:Connect(function()
                 enabled = not enabled
                 updateVisual()
+                local origSize = dot.Size
+                tw(dot, {Size = UDim2.new(0, 18, 0, 18), Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
+                task.delay(0.12, function() tw(dot, {Size = origSize, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12) end)
                 if flag then updateFlag(flag, enabled) end
                 if cfg.Callback then task.spawn(cfg.Callback, enabled) end
             end)
@@ -1502,6 +1531,7 @@ function XiroLib:CreateWindow(config)
             arrow.TextColor3 = C.SubText
             arrow.Font = FONT
             arrow.TextSize = 9
+            arrow.Rotation = 0
             arrow.Parent = mainRow
 
             -- Options container
@@ -1566,7 +1596,7 @@ function XiroLib:CreateWindow(config)
                             -- Close dropdown after single selection
                             isOpen = false
                             optContainer.Visible = false
-                            arrow.Text = "▼"
+                            tw(arrow, {Rotation = 0}, 0.18)
                         end
                         valueLabel.Text = table.concat(current, ", ")
                         if flag then updateFlag(flag, current) end
@@ -1587,8 +1617,15 @@ function XiroLib:CreateWindow(config)
 
             local function closeThis()
                 isOpen = false
-                optContainer.Visible = false
-                arrow.Text = "▼"
+                tw(arrow, {Rotation = 0}, 0.18)
+                for _, b in optContainer:GetChildren() do
+                    if b:IsA("TextButton") then
+                        tw(b, {BackgroundTransparency = 1, TextTransparency = 1}, 0.12)
+                    end
+                end
+                task.delay(0.12, function()
+                    if not isOpen then optContainer.Visible = false end
+                end)
             end
 
             mainBtn.MouseButton1Click:Connect(function()
@@ -1599,9 +1636,16 @@ function XiroLib:CreateWindow(config)
                     closeOpenDropdown()
                     isOpen = true
                     optContainer.Visible = true
-                    arrow.Text = "▲"
+                    tw(arrow, {Rotation = 180}, 0.18)
                     openDropdown = closeThis
                     buildOptions()
+                    for _, b in optContainer:GetChildren() do
+                        if b:IsA("TextButton") then
+                            b.BackgroundTransparency = 1
+                            b.TextTransparency = 1
+                            tw(b, {BackgroundTransparency = 0, TextTransparency = 0}, 0.18)
+                        end
+                    end
                 end
             end)
 
@@ -1777,7 +1821,7 @@ function XiroLib:CreateWindow(config)
             btn.MouseButton1Click:Connect(function()
                 listening = true
                 keyLabel.Text = "..."
-                keyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+                tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
             end)
 
             UIS.InputBegan:Connect(function(input, gpe)
@@ -1786,7 +1830,7 @@ function XiroLib:CreateWindow(config)
                     listening = false
                     currentKey = input.KeyCode.Name
                     keyLabel.Text = currentKey
-                    keyLabel.TextColor3 = C.Accent
+                    tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
                     if flag then updateFlag(flag, currentKey) end
                     if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
                 end
@@ -1858,6 +1902,14 @@ function XiroLib:CreateWindow(config)
             textBox.ClearTextOnFocus = false
             textBox.Parent = frame
             addCorner(textBox, 3)
+            local boxStroke = addStroke(textBox, 1, C.Border)
+
+            textBox.Focused:Connect(function()
+                tw(boxStroke, {Color = C.Accent, Thickness = 1.5}, 0.15)
+            end)
+            textBox.FocusLost:Connect(function()
+                tw(boxStroke, {Color = C.Border, Thickness = 1}, 0.15)
+            end)
 
             textBox.FocusLost:Connect(function(enter)
                 if enter then
@@ -2045,7 +2097,10 @@ function XiroLib:Notify(cfg)
         cLabel.Parent = notif
     end
 
-    -- Animate in
+    -- Animate in (bg + labels + stroke together)
+    for _, c in notif:GetChildren() do
+        if c:IsA("TextLabel") then c.TextTransparency = 1; tw(c, {TextTransparency = 0}, 0.25) end
+    end
     tw(notif, {BackgroundTransparency = 0}, 0.2)
 
     task.delay(duration, function()
