@@ -71,6 +71,35 @@ local savedMouseBehavior = nil
 local FADE_STAGGER    = 0.05 -- stagger delay between panel fade-ins
 local FADE_STAGGER_OUT = 0.025 -- stagger delay for fade-out (稍快，收得干脆)
 
+---------- INPUT DISPATCHER ----------
+-- Consolidate global UIS listeners: handlers opt in only while active,
+-- so idle UI costs 0 work per mouse-move event.
+
+local moveHandlers = {}       -- [fn] = true, called on MouseMovement/Touch change
+local endHandlers = {}        -- [fn] = true, called on MouseButton1/Touch end
+local keybindListener = nil   -- single active keybind capture: fn(input) or nil
+
+UIS.InputChanged:Connect(function(input)
+    local t = input.UserInputType
+    if t == Enum.UserInputType.MouseMovement or t == Enum.UserInputType.Touch then
+        for fn in pairs(moveHandlers) do fn(input) end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    local t = input.UserInputType
+    if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
+        for fn in pairs(endHandlers) do fn(input) end
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if keybindListener and input.UserInputType == Enum.UserInputType.Keyboard then
+        keybindListener(input)
+    end
+end)
+
 ---------- UTILITIES ----------
 
 local function addCorner(parent, r)
@@ -102,47 +131,54 @@ local function snapVal(val, mn, mx, inc)
 end
 
 local function makeDraggable(frame, handle)
-    local dragging = false
     local dragStart, startPos
+    local moveFn
+    moveFn = function(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
 
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
             dragStart = input.Position
             startPos = frame.Position
             zCounter = zCounter + 1
             frame.ZIndex = zCounter
+            moveHandlers[moveFn] = true
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+                    moveHandlers[moveFn] = nil
                 end
             end)
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
         end
     end)
 end
 
 ---------- CONFIG SYSTEM ----------
 
+local saveDirty = false
+local savePending = false
 local function saveConfig()
     if not configEnabled then return end
-    pcall(function()
-        local data = {}
-        for flag, info in pairs(flagStore) do
-            data[flag] = info.value
-        end
-        local folder = configFolder
-        if not isfolder(folder) then makefolder(folder) end
-        writefile(folder .. "/" .. configFile .. ".json", HttpService:JSONEncode(data))
+    saveDirty = true
+    if savePending then return end
+    savePending = true
+    task.delay(0.5, function()
+        savePending = false
+        if not saveDirty then return end
+        saveDirty = false
+        pcall(function()
+            local data = {}
+            for flag, info in pairs(flagStore) do
+                data[flag] = info.value
+            end
+            local folder = configFolder
+            if not isfolder(folder) then makefolder(folder) end
+            writefile(folder .. "/" .. configFile .. ".json", HttpService:JSONEncode(data))
+        end)
     end)
 end
 
@@ -292,23 +328,6 @@ function XiroLib:CreateWindow(config)
     notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     notifLayout.Parent = notifContainer
 
-    -- Save original transparency values for fade animation
-    local function saveOrigTransparency(obj)
-        if obj:GetAttribute("_xOrigBT") ~= nil then return end
-        if obj:IsA("GuiObject") then
-            obj:SetAttribute("_xOrigBT", obj.BackgroundTransparency)
-        end
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-            obj:SetAttribute("_xOrigTT", obj.TextTransparency)
-        end
-        if obj:IsA("ScrollingFrame") then
-            obj:SetAttribute("_xOrigSB", obj.ScrollBarImageTransparency)
-        end
-        if obj:IsA("UIStroke") then
-            obj:SetAttribute("_xOrigST", obj.Transparency)
-        end
-    end
-
     -- 保证面板有UIScale，用于pop缩放动画
     local function ensurePanelScale(p)
         local s = p:FindFirstChild("_XiroAnim")
@@ -325,7 +344,7 @@ function XiroLib:CreateWindow(config)
 
     local FADE_OUT_DUR  = 0.16
     local FADE_IN_DUR   = 0.24
-    local FADE_IN_SCALE = 0.28 -- scale回弹稍长
+    local FADE_IN_SCALE = 0.28
     local POP_START     = 0.9
     local POP_END_OUT   = 0.94
 
@@ -339,47 +358,21 @@ function XiroLib:CreateWindow(config)
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_IN_QUART, {BackgroundTransparency = 1}):Play()
+            TS:Create(p, EASE_IN_QUART, {GroupTransparency = 1}):Play()
             TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
-            for _, d in p:GetDescendants() do
-                saveOrigTransparency(d)
-                if d:IsA("TextLabel") or d:IsA("TextButton") then
-                    TS:Create(d, EASE_IN_QUART, {TextTransparency = 1}):Play()
-                elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
-                    TS:Create(d, EASE_IN_QUART, {BackgroundTransparency = 1}):Play()
-                end
-                if d:IsA("ScrollingFrame") then
-                    TS:Create(d, EASE_IN_QUART, {ScrollBarImageTransparency = 1}):Play()
-                end
-                if d:IsA("UIStroke") then
-                    TS:Create(d, EASE_IN_QUART, {Transparency = 1}):Play()
-                end
-            end
         end)
     end
 
     local function fadeInPanel(p, delay)
         local scale = ensurePanelScale(p)
-        scale.Scale = POP_START -- 在task.delay之前立即重置，让pop效果可见
+        scale.Scale = POP_START
+        p.GroupTransparency = 1
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_OUT_QUART, {BackgroundTransparency = p:GetAttribute("_xOrigBT") or 0}):Play()
-            TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play() -- Back.Out带微弹
-            for _, d in p:GetDescendants() do
-                if d:IsA("TextLabel") or d:IsA("TextButton") then
-                    TS:Create(d, EASE_OUT_QUART, {TextTransparency = d:GetAttribute("_xOrigTT") or 0}):Play()
-                elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
-                    TS:Create(d, EASE_OUT_QUART, {BackgroundTransparency = d:GetAttribute("_xOrigBT") or 0}):Play()
-                end
-                if d:IsA("ScrollingFrame") then
-                    TS:Create(d, EASE_OUT_QUART, {ScrollBarImageTransparency = d:GetAttribute("_xOrigSB") or 0.3}):Play()
-                end
-                if d:IsA("UIStroke") then
-                    TS:Create(d, EASE_OUT_QUART, {Transparency = d:GetAttribute("_xOrigST") or 0}):Play()
-                end
-            end
+            TS:Create(p, EASE_OUT_QUART, {GroupTransparency = 0}):Play()
+            TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play()
         end)
     end
 
@@ -407,7 +400,6 @@ function XiroLib:CreateWindow(config)
             end)
         else
             for i, p in ipairs(panels) do
-                saveOrigTransparency(p)
                 fadeOutPanel(p, (i - 1) * FADE_STAGGER_OUT)
             end
             task.delay(#panels * FADE_STAGGER_OUT + 0.2, function()
@@ -471,10 +463,6 @@ function XiroLib:CreateWindow(config)
         loadScreen:Destroy()
         panelContainer.Visible = true
         unlockMouse()
-        for i, p in ipairs(panels) do
-            saveOrigTransparency(p)
-            for _, d in p:GetDescendants() do saveOrigTransparency(d) end
-        end
     end)
 
     --======================================================
@@ -486,14 +474,15 @@ function XiroLib:CreateWindow(config)
         panelCount = panelCount + 1
         local panelIndex = panelCount
 
-        -- Panel frame
-        local panel = Instance.new("Frame")
+        -- Panel (CanvasGroup enables single-property fade via GroupTransparency)
+        local panel = Instance.new("CanvasGroup")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = true
+        panel.GroupTransparency = 0
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
@@ -926,28 +915,32 @@ function XiroLib:CreateWindow(config)
                 end
 
                 local sliding = false
-                dragArea.MouseButton1Down:Connect(function() sliding = true end)
-                UIS.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
-                        sliding = false
-                        local snapped = snapVal(value, mn, mx, inc)
-                        local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                        slideTo(pct, 0.2)
-                        commitValue(snapped)
-                    end
-                end)
-                UIS.InputChanged:Connect(function(input)
-                    if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local absPos = barBG.AbsolutePosition.X
-                        local absSize = barBG.AbsoluteSize.X
-                        local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                        local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
-                        local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
-                        slideTo(pct, 0.12)
-                        local display = snapVal(rawVal, mn, mx, inc)
-                        valLabel.Text = formatDisplay(display) .. suffix
-                        value = rawVal
-                    end
+                local slMove, slEnd
+                slMove = function(input)
+                    local absPos = barBG.AbsolutePosition.X
+                    local absSize = barBG.AbsoluteSize.X
+                    local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
+                    local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
+                    local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
+                    slideTo(pct, 0.12)
+                    local display = snapVal(rawVal, mn, mx, inc)
+                    valLabel.Text = formatDisplay(display) .. suffix
+                    value = rawVal
+                end
+                slEnd = function()
+                    if not sliding then return end
+                    sliding = false
+                    moveHandlers[slMove] = nil
+                    endHandlers[slEnd] = nil
+                    local snapped = snapVal(value, mn, mx, inc)
+                    local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                    slideTo(pct, 0.2)
+                    commitValue(snapped)
+                end
+                dragArea.MouseButton1Down:Connect(function()
+                    sliding = true
+                    moveHandlers[slMove] = true
+                    endHandlers[slEnd] = true
                 end)
                 dragArea.MouseButton1Click:Connect(function()
                     local mouse = UIS:GetMouseLocation()
@@ -1496,33 +1489,33 @@ function XiroLib:CreateWindow(config)
             end
 
             local sliding = false
+            local slMove, slEnd
+            slMove = function(input)
+                local absPos = barBG.AbsolutePosition.X
+                local absSize = barBG.AbsoluteSize.X
+                local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
+                local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
+                local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
+                slideTo(pct, 0.12)
+                local display = snapVal(rawVal, mn, mx, inc)
+                valLabel.Text = formatDisplay(display) .. suffix
+                value = rawVal
+            end
+            slEnd = function()
+                if not sliding then return end
+                sliding = false
+                moveHandlers[slMove] = nil
+                endHandlers[slEnd] = nil
+                local snapped = snapVal(value, mn, mx, inc)
+                local pct = (snapped - mn) / math.max(mx - mn, 0.001)
+                slideTo(pct, 0.2)
+                commitValue(snapped)
+            end
 
             dragArea.MouseButton1Down:Connect(function()
                 sliding = true
-            end)
-
-            UIS.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
-                    sliding = false
-                    local snapped = snapVal(value, mn, mx, inc)
-                    local pct = (snapped - mn) / math.max(mx - mn, 0.001)
-                    slideTo(pct, 0.2)
-                    commitValue(snapped)
-                end
-            end)
-
-            UIS.InputChanged:Connect(function(input)
-                if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    local absPos = barBG.AbsolutePosition.X
-                    local absSize = barBG.AbsoluteSize.X
-                    local relX = math.clamp((input.Position.X - absPos) / absSize, 0, 1)
-                    local rawVal = math.clamp(mn + relX * (mx - mn), mn, mx)
-                    local pct = (rawVal - mn) / math.max(mx - mn, 0.001)
-                    slideTo(pct, 0.12)
-                    local display = snapVal(rawVal, mn, mx, inc)
-                    valLabel.Text = formatDisplay(display) .. suffix
-                    value = rawVal
-                end
+                moveHandlers[slMove] = true
+                endHandlers[slEnd] = true
             end)
 
             dragArea.MouseButton1Click:Connect(function()
@@ -1916,22 +1909,22 @@ function XiroLib:CreateWindow(config)
             btn.Text = ""
             btn.Parent = frame
 
+            local captureFn
+            captureFn = function(input)
+                listening = false
+                keybindListener = nil
+                currentKey = input.KeyCode.Name
+                keyLabel.Text = currentKey
+                tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
+                if flag then updateFlag(flag, currentKey) end
+                if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
+            end
+
             btn.MouseButton1Click:Connect(function()
                 listening = true
                 keyLabel.Text = "..."
                 tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
-            end)
-
-            UIS.InputBegan:Connect(function(input, gpe)
-                if not listening then return end
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    listening = false
-                    currentKey = input.KeyCode.Name
-                    keyLabel.Text = currentKey
-                    tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
-                    if flag then updateFlag(flag, currentKey) end
-                    if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
-                end
+                keybindListener = captureFn
             end)
 
             frame.MouseEnter:Connect(function()
