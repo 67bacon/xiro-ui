@@ -1264,6 +1264,207 @@ function XiroLib:CreateWindow(config)
                 label.Parent = frame
             end
 
+            function Acc:CreateKeybind(cfg)
+                cfg = cfg or {}
+                local currentKey = cfg.CurrentKeybind or "None"
+                local flag = cfg.Flag
+                local listening = false
+
+                local frame = Instance.new("Frame")
+                frame.Name = "Keybind_" .. (cfg.Name or "")
+                frame.Size = UDim2.new(1, 0, 0, ELEM_H)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, -80, 1, 0)
+                label.Position = UDim2.new(0, 10, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = cfg.Name or "Keybind"
+                label.TextColor3 = C.Text
+                label.Font = FONT
+                label.TextSize = FSIZE
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.Parent = frame
+
+                local keyLabel = Instance.new("TextLabel")
+                keyLabel.Size = UDim2.new(0, 60, 0, 20)
+                keyLabel.Position = UDim2.new(1, -70, 0.5, -10)
+                keyLabel.BackgroundColor3 = C.SliderBG
+                keyLabel.BorderSizePixel = 0
+                keyLabel.Text = currentKey
+                keyLabel.TextColor3 = C.Accent
+                keyLabel.Font = FONT
+                keyLabel.TextSize = FSIZE_SMALL
+                keyLabel.Parent = frame
+                addCorner(keyLabel, 3)
+
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, 0, 1, 0)
+                btn.BackgroundTransparency = 1
+                btn.Text = ""
+                btn.Parent = frame
+
+                local captureFn
+                captureFn = function(input)
+                    listening = false
+                    keybindListener = nil
+                    currentKey = input.KeyCode.Name
+                    keyLabel.Text = currentKey
+                    tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
+                    if flag then updateFlag(flag, currentKey) end
+                    if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
+                end
+
+                btn.MouseButton1Click:Connect(function()
+                    listening = true
+                    keyLabel.Text = "..."
+                    tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
+                    keybindListener = captureFn
+                end)
+
+                frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
+                frame.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.1) end)
+
+                local kb = {}
+                kb.CurrentKeybind = currentKey
+                function kb:Set(key)
+                    currentKey = key
+                    kb.CurrentKeybind = key
+                    keyLabel.Text = key
+                    if flag then updateFlag(flag, key) end
+                    if cfg.Callback then task.spawn(cfg.Callback, key) end
+                end
+                if flag then registerFlag(flag, currentKey, function(val) kb:Set(val) end) end
+                return kb
+            end
+
+            function Acc:CreateInput(cfg)
+                cfg = cfg or {}
+                local flag = cfg.Flag
+
+                local frame = Instance.new("Frame")
+                frame.Name = "Input_" .. (cfg.Name or "")
+                frame.Size = UDim2.new(1, 0, 0, ELEM_H + 6)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(0.4, -8, 1, 0)
+                label.Position = UDim2.new(0, 10, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = cfg.Name or "Input"
+                label.TextColor3 = C.Text
+                label.Font = FONT
+                label.TextSize = FSIZE
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.Parent = frame
+
+                local textBox = Instance.new("TextBox")
+                textBox.Size = UDim2.new(0.55, -10, 0, 22)
+                textBox.Position = UDim2.new(0.4, 0, 0.5, -11)
+                textBox.BackgroundColor3 = C.SliderBG
+                textBox.BorderSizePixel = 0
+                textBox.Text = cfg.CurrentValue or ""
+                textBox.PlaceholderText = cfg.PlaceholderText or "..."
+                textBox.TextColor3 = C.Text
+                textBox.PlaceholderColor3 = C.SubText
+                textBox.Font = FONT
+                textBox.TextSize = FSIZE_SMALL
+                textBox.ClearTextOnFocus = false
+                textBox.Parent = frame
+                addCorner(textBox, 3)
+                local boxStroke = addStroke(textBox, 1, C.Border)
+
+                textBox.Focused:Connect(function() tw(boxStroke, {Color = C.Accent, Thickness = 1.5}, 0.15) end)
+                textBox.FocusLost:Connect(function(enter)
+                    tw(boxStroke, {Color = C.Border, Thickness = 1}, 0.15)
+                    if enter then
+                        local val = textBox.Text
+                        if flag then updateFlag(flag, val) end
+                        if cfg.Callback then task.spawn(cfg.Callback, val) end
+                    end
+                end)
+
+                local inp = {}
+                function inp:Set(val)
+                    textBox.Text = val or ""
+                    if flag then updateFlag(flag, val) end
+                end
+                if flag then registerFlag(flag, cfg.CurrentValue or "", function(val) inp:Set(val) end) end
+                return inp
+            end
+
+            function Acc:CreateParagraph(cfg)
+                cfg = cfg or {}
+                local title = cfg.Title or cfg.Name or ""
+                local bodyText = cfg.Content or ""
+
+                local frame = Instance.new("Frame")
+                frame.Name = "Paragraph"
+                frame.AutomaticSize = Enum.AutomaticSize.Y
+                frame.Size = UDim2.new(1, 0, 0, 0)
+                frame.BackgroundColor3 = C.Elem
+                frame.BorderSizePixel = 0
+                frame.LayoutOrder = accNextOrder()
+                frame.Parent = content
+                addCorner(frame, CORNER_SM)
+
+                local padInner = Instance.new("UIPadding")
+                padInner.PaddingLeft = UDim.new(0, 10)
+                padInner.PaddingRight = UDim.new(0, 10)
+                padInner.PaddingTop = UDim.new(0, 6)
+                padInner.PaddingBottom = UDim.new(0, 6)
+                padInner.Parent = frame
+
+                local innerLayout = Instance.new("UIListLayout")
+                innerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                innerLayout.Padding = UDim.new(0, 3)
+                innerLayout.Parent = frame
+
+                local tLabel
+                if title ~= "" then
+                    tLabel = Instance.new("TextLabel")
+                    tLabel.AutomaticSize = Enum.AutomaticSize.Y
+                    tLabel.Size = UDim2.new(1, 0, 0, 0)
+                    tLabel.BackgroundTransparency = 1
+                    tLabel.Text = title
+                    tLabel.TextColor3 = C.Accent
+                    tLabel.Font = FONT_SEMI
+                    tLabel.TextSize = FSIZE
+                    tLabel.TextXAlignment = Enum.TextXAlignment.Left
+                    tLabel.TextWrapped = true
+                    tLabel.LayoutOrder = 1
+                    tLabel.Parent = frame
+                end
+
+                local cLabel = Instance.new("TextLabel")
+                cLabel.AutomaticSize = Enum.AutomaticSize.Y
+                cLabel.Size = UDim2.new(1, 0, 0, 0)
+                cLabel.BackgroundTransparency = 1
+                cLabel.Text = bodyText
+                cLabel.TextColor3 = C.SubText
+                cLabel.Font = FONT
+                cLabel.TextSize = FSIZE_SMALL
+                cLabel.TextXAlignment = Enum.TextXAlignment.Left
+                cLabel.TextWrapped = true
+                cLabel.LayoutOrder = 2
+                cLabel.Parent = frame
+
+                local p = {}
+                function p:Set(cfg2)
+                    if cfg2.Title and tLabel then tLabel.Text = cfg2.Title end
+                    if cfg2.Content then cLabel.Text = cfg2.Content end
+                end
+                return p
+            end
+
             return Acc
         end
 
