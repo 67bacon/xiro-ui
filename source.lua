@@ -347,29 +347,42 @@ function XiroLib:CreateWindow(config)
         end)
     end
 
-    -- Toggle UI keybind
+    -- Toggle UI keybind (防连按卡顿: token失效 + 动画锁)
+    local toggleToken = 0
+    local toggleBusy = false
     UIS.InputBegan:Connect(function(input, gpe)
         if gpe then return end
-        if input.KeyCode == toggleKeybind then
-            uiVisible = not uiVisible
-            if uiVisible then
-                panelContainer.Visible = true
-                unlockMouse()
-                for i, p in ipairs(panels) do
-                    fadeInPanel(p, (i - 1) * FADE_STAGGER)
-                end
-            else
-                for i, p in ipairs(panels) do
-                    saveOrigTransparency(p)
-                    fadeOutPanel(p, (i - 1) * 0.03)
-                end
-                task.delay(0.25, function()
-                    if not uiVisible then
-                        panelContainer.Visible = false
-                        restoreMouse()
-                    end
-                end)
+        if input.KeyCode ~= toggleKeybind then return end
+        if toggleBusy then return end -- 动画进行中，忽略按键
+
+        toggleBusy = true
+        toggleToken = toggleToken + 1
+        local myToken = toggleToken
+        uiVisible = not uiVisible
+
+        if uiVisible then
+            panelContainer.Visible = true
+            unlockMouse()
+            for i, p in ipairs(panels) do
+                fadeInPanel(p, (i - 1) * FADE_STAGGER)
             end
+            -- 淡入完成才解锁 (最长 panel_count*stagger + 0.3)
+            task.delay(#panels * FADE_STAGGER + 0.3, function()
+                if myToken == toggleToken then toggleBusy = false end
+            end)
+        else
+            for i, p in ipairs(panels) do
+                saveOrigTransparency(p)
+                fadeOutPanel(p, (i - 1) * 0.03)
+            end
+            task.delay(#panels * 0.03 + 0.2, function()
+                -- 只有当前token仍然有效时才隐藏，避免被后续toggle覆盖
+                if myToken == toggleToken and not uiVisible then
+                    panelContainer.Visible = false
+                    restoreMouse()
+                end
+                if myToken == toggleToken then toggleBusy = false end
+            end)
         end
     end)
 
