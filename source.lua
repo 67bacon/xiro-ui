@@ -1053,7 +1053,6 @@ function XiroLib:CreateWindow(config)
 
                 local optContainer = Instance.new("Frame")
                 optContainer.Name = "Options"
-                optContainer.AutomaticSize = Enum.AutomaticSize.Y
                 optContainer.Size = UDim2.new(1, 0, 0, 0)
                 optContainer.BackgroundTransparency = 1
                 optContainer.Parent = optWrap
@@ -1070,6 +1069,9 @@ function XiroLib:CreateWindow(config)
                 local function getFullH()
                     local n = #options
                     return n * 24 + math.max(0, n - 1) + 2
+                end
+                local function refreshContainerH()
+                    optContainer.Size = UDim2.new(1, 0, 0, getFullH())
                 end
 
                 local function buildOptions()
@@ -1121,6 +1123,7 @@ function XiroLib:CreateWindow(config)
                             end
                         end)
                     end
+                    refreshContainerH()
                 end
                 buildOptions()
 
@@ -1151,8 +1154,7 @@ function XiroLib:CreateWindow(config)
                         isOpen = true
                         optWrap.Size = UDim2.new(1, 0, 0, 0)
                         optWrap.Visible = true
-                        buildOptions()
-                        task.wait() -- let UIListLayout position buttons before we tween
+                        refreshContainerH()
                         tw(ddArrow, {Rotation = 180}, 0.22)
                         TS:Create(optWrap, EXPAND_INFO, {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
                         openDropdown = closeThis
@@ -1863,7 +1865,6 @@ function XiroLib:CreateWindow(config)
 
             local optContainer = Instance.new("Frame")
             optContainer.Name = "Options"
-            optContainer.AutomaticSize = Enum.AutomaticSize.Y
             optContainer.Size = UDim2.new(1, 0, 0, 0)
             optContainer.BackgroundTransparency = 1
             optContainer.Parent = optWrap
@@ -1880,6 +1881,9 @@ function XiroLib:CreateWindow(config)
             local function getFullH()
                 local n = #options
                 return n * 24 + math.max(0, n - 1) + 2
+            end
+            local function refreshContainerH()
+                optContainer.Size = UDim2.new(1, 0, 0, getFullH())
             end
 
             local function buildOptions()
@@ -1941,6 +1945,7 @@ function XiroLib:CreateWindow(config)
                         end
                     end)
                 end
+                refreshContainerH()
             end
 
             buildOptions()
@@ -1973,8 +1978,7 @@ function XiroLib:CreateWindow(config)
                     isOpen = true
                     optWrap.Size = UDim2.new(1, 0, 0, 0)
                     optWrap.Visible = true
-                    buildOptions()
-                    task.wait() -- let UIListLayout position buttons before we tween
+                    refreshContainerH()
                     tw(arrow, {Rotation = 180}, 0.22)
                     TS:Create(optWrap, EXPAND_INFO, {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
                     openDropdown = closeThis
