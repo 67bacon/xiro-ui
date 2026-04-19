@@ -765,13 +765,20 @@ function XiroLib:CreateWindow(config)
                 btn.Text = ""
                 btn.Parent = frame
 
+                local DOT_BASE_SIZE = UDim2.new(0, 14, 0, 14)
+                local DOT_POP_SIZE = UDim2.new(0, 18, 0, 18)
+                local dotToken = 0
                 btn.MouseButton1Click:Connect(function()
                     enabled = not enabled
                     updateVisual()
-                    -- subtle dot pulse
-                    local origSize = dot.Size
-                    tw(dot, {Size = UDim2.new(0, 18, 0, 18), Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
-                    task.delay(0.12, function() tw(dot, {Size = origSize, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12) end)
+                    dotToken = dotToken + 1
+                    local myToken = dotToken
+                    tw(dot, {Size = DOT_POP_SIZE, Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
+                    task.delay(0.12, function()
+                        if myToken == dotToken then
+                            tw(dot, {Size = DOT_BASE_SIZE, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12)
+                        end
+                    end)
                     if flag then updateFlag(flag, enabled) end
                     if cfg.Callback then task.spawn(cfg.Callback, enabled) end
                 end)
@@ -1311,12 +1318,21 @@ function XiroLib:CreateWindow(config)
             btn.Text = ""
             btn.Parent = frame
 
+            -- 防连点: 用token+固定基准尺寸，避免叠加动画把dot卡在"变大"状态
+            local DOT_BASE_SIZE = UDim2.new(0, 14, 0, 14)
+            local DOT_POP_SIZE = UDim2.new(0, 18, 0, 18)
+            local dotToken = 0
             btn.MouseButton1Click:Connect(function()
                 enabled = not enabled
                 updateVisual()
-                local origSize = dot.Size
-                tw(dot, {Size = UDim2.new(0, 18, 0, 18), Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
-                task.delay(0.12, function() tw(dot, {Size = origSize, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12) end)
+                dotToken = dotToken + 1
+                local myToken = dotToken
+                tw(dot, {Size = DOT_POP_SIZE, Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
+                task.delay(0.12, function()
+                    if myToken == dotToken then
+                        tw(dot, {Size = DOT_BASE_SIZE, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12)
+                    end
+                end)
                 if flag then updateFlag(flag, enabled) end
                 if cfg.Callback then task.spawn(cfg.Callback, enabled) end
             end)
