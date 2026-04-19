@@ -68,7 +68,8 @@ local uiVisible       = true
 local toggleKeybind   = Enum.KeyCode.RightShift
 local openDropdown    = nil -- currently open dropdown closer
 local savedMouseBehavior = nil
-local FADE_STAGGER    = 0.06 -- stagger delay between panel fade-ins
+local FADE_STAGGER    = 0.05 -- stagger delay between panel fade-ins
+local FADE_STAGGER_OUT = 0.025 -- stagger delay for fade-out (稍快，收得干脆)
 
 ---------- UTILITIES ----------
 
@@ -308,40 +309,75 @@ function XiroLib:CreateWindow(config)
         end
     end
 
+    -- 保证面板有UIScale，用于pop缩放动画
+    local function ensurePanelScale(p)
+        local s = p:FindFirstChild("_XiroAnim")
+        if not s then
+            s = Instance.new("UIScale")
+            s.Name = "_XiroAnim"
+            s.Scale = 1
+            s.Parent = p
+        end
+        return s
+    end
+
+    local fadeTokens = setmetatable({}, {__mode = "k"}) -- panel -> token，弱引用
+
+    local FADE_OUT_DUR  = 0.16
+    local FADE_IN_DUR   = 0.24
+    local FADE_IN_SCALE = 0.28 -- scale回弹稍长
+    local POP_START     = 0.9
+    local POP_END_OUT   = 0.94
+
+    local EASE_OUT_QUART = TweenInfo.new(FADE_IN_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local EASE_IN_QUART  = TweenInfo.new(FADE_OUT_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+    local EASE_BACK_OUT  = TweenInfo.new(FADE_IN_SCALE, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
     local function fadeOutPanel(p, delay)
+        local scale = ensurePanelScale(p)
+        fadeTokens[p] = (fadeTokens[p] or 0) + 1
+        local myToken = fadeTokens[p]
         task.delay(delay, function()
-            tw(p, {BackgroundTransparency = 1}, 0.2)
+            if fadeTokens[p] ~= myToken then return end
+            TS:Create(p, EASE_IN_QUART, {BackgroundTransparency = 1}):Play()
+            TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
             for _, d in p:GetDescendants() do
                 saveOrigTransparency(d)
                 if d:IsA("TextLabel") or d:IsA("TextButton") then
-                    tw(d, {TextTransparency = 1}, 0.2)
+                    TS:Create(d, EASE_IN_QUART, {TextTransparency = 1}):Play()
                 elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
-                    tw(d, {BackgroundTransparency = 1}, 0.2)
+                    TS:Create(d, EASE_IN_QUART, {BackgroundTransparency = 1}):Play()
                 end
                 if d:IsA("ScrollingFrame") then
-                    tw(d, {ScrollBarImageTransparency = 1}, 0.2)
+                    TS:Create(d, EASE_IN_QUART, {ScrollBarImageTransparency = 1}):Play()
                 end
                 if d:IsA("UIStroke") then
-                    tw(d, {Transparency = 1}, 0.2)
+                    TS:Create(d, EASE_IN_QUART, {Transparency = 1}):Play()
                 end
             end
         end)
     end
 
     local function fadeInPanel(p, delay)
+        local scale = ensurePanelScale(p)
+        scale.Scale = POP_START -- 在task.delay之前立即重置，让pop效果可见
+        fadeTokens[p] = (fadeTokens[p] or 0) + 1
+        local myToken = fadeTokens[p]
         task.delay(delay, function()
-            tw(p, {BackgroundTransparency = p:GetAttribute("_xOrigBT") or 0}, 0.3)
+            if fadeTokens[p] ~= myToken then return end
+            TS:Create(p, EASE_OUT_QUART, {BackgroundTransparency = p:GetAttribute("_xOrigBT") or 0}):Play()
+            TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play() -- Back.Out带微弹
             for _, d in p:GetDescendants() do
                 if d:IsA("TextLabel") or d:IsA("TextButton") then
-                    tw(d, {TextTransparency = d:GetAttribute("_xOrigTT") or 0}, 0.3)
+                    TS:Create(d, EASE_OUT_QUART, {TextTransparency = d:GetAttribute("_xOrigTT") or 0}):Play()
                 elseif d:IsA("Frame") or d:IsA("ScrollingFrame") then
-                    tw(d, {BackgroundTransparency = d:GetAttribute("_xOrigBT") or 0}, 0.3)
+                    TS:Create(d, EASE_OUT_QUART, {BackgroundTransparency = d:GetAttribute("_xOrigBT") or 0}):Play()
                 end
                 if d:IsA("ScrollingFrame") then
-                    tw(d, {ScrollBarImageTransparency = d:GetAttribute("_xOrigSB") or 0.3}, 0.3)
+                    TS:Create(d, EASE_OUT_QUART, {ScrollBarImageTransparency = d:GetAttribute("_xOrigSB") or 0.3}):Play()
                 end
                 if d:IsA("UIStroke") then
-                    tw(d, {Transparency = d:GetAttribute("_xOrigST") or 0}, 0.3)
+                    TS:Create(d, EASE_OUT_QUART, {Transparency = d:GetAttribute("_xOrigST") or 0}):Play()
                 end
             end
         end)
@@ -366,17 +402,15 @@ function XiroLib:CreateWindow(config)
             for i, p in ipairs(panels) do
                 fadeInPanel(p, (i - 1) * FADE_STAGGER)
             end
-            -- 淡入完成才解锁 (最长 panel_count*stagger + 0.3)
             task.delay(#panels * FADE_STAGGER + 0.3, function()
                 if myToken == toggleToken then toggleBusy = false end
             end)
         else
             for i, p in ipairs(panels) do
                 saveOrigTransparency(p)
-                fadeOutPanel(p, (i - 1) * 0.03)
+                fadeOutPanel(p, (i - 1) * FADE_STAGGER_OUT)
             end
-            task.delay(#panels * 0.03 + 0.2, function()
-                -- 只有当前token仍然有效时才隐藏，避免被后续toggle覆盖
+            task.delay(#panels * FADE_STAGGER_OUT + 0.2, function()
                 if myToken == toggleToken and not uiVisible then
                     panelContainer.Visible = false
                     restoreMouse()
