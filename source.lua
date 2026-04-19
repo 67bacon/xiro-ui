@@ -1041,14 +1041,22 @@ function XiroLib:CreateWindow(config)
                 ddArrow.Rotation = 0
                 ddArrow.Parent = mainRow
 
+                local optWrap = Instance.new("CanvasGroup")
+                optWrap.Name = "OptionsWrap"
+                optWrap.Size = UDim2.new(1, 0, 0, 0)
+                optWrap.BackgroundTransparency = 1
+                optWrap.ClipsDescendants = true
+                optWrap.GroupTransparency = 1
+                optWrap.Visible = false
+                optWrap.LayoutOrder = 1
+                optWrap.Parent = ddContainer
+
                 local optContainer = Instance.new("Frame")
                 optContainer.Name = "Options"
                 optContainer.AutomaticSize = Enum.AutomaticSize.Y
                 optContainer.Size = UDim2.new(1, 0, 0, 0)
                 optContainer.BackgroundTransparency = 1
-                optContainer.Visible = false
-                optContainer.LayoutOrder = 1
-                optContainer.Parent = ddContainer
+                optContainer.Parent = optWrap
 
                 local optLayout = Instance.new("UIListLayout")
                 optLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1058,6 +1066,11 @@ function XiroLib:CreateWindow(config)
                 local optPad = Instance.new("UIPadding")
                 optPad.PaddingTop = UDim.new(0, 2)
                 optPad.Parent = optContainer
+
+                local function getFullH()
+                    local n = #options
+                    return n * 24 + math.max(0, n - 1) + 2
+                end
 
                 local function buildOptions()
                     for _, child in optContainer:GetChildren() do
@@ -1090,14 +1103,22 @@ function XiroLib:CreateWindow(config)
                                 if idx then table.remove(current, idx) else table.insert(current, opt) end
                             else
                                 current = {opt}
-                                isOpen = false
-                                optContainer.Visible = false
-                                tw(ddArrow, {Rotation = 0}, 0.18)
                             end
                             valueLabel.Text = table.concat(current, ", ")
                             if flag then updateFlag(flag, current) end
                             if cfg.Callback then task.spawn(cfg.Callback, current) end
                             buildOptions()
+                            if not multi then
+                                isOpen = false
+                                tw(ddArrow, {Rotation = 0}, 0.16)
+                                TS:Create(optWrap, TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+                                task.delay(0.16, function()
+                                    if not isOpen then optWrap.Visible = false end
+                                end)
+                                openDropdown = nil
+                            else
+                                TS:Create(optWrap, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
+                            end
                         end)
                     end
                 end
@@ -1109,16 +1130,15 @@ function XiroLib:CreateWindow(config)
                 mainBtn.Text = ""
                 mainBtn.Parent = mainRow
 
+                local EXPAND_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+                local COLLAPSE_INFO = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+
                 local function closeThis()
                     isOpen = false
-                    tw(ddArrow, {Rotation = 0}, 0.18)
-                    for _, b in optContainer:GetChildren() do
-                        if b:IsA("TextButton") then
-                            tw(b, {BackgroundTransparency = 1, TextTransparency = 1}, 0.12)
-                        end
-                    end
-                    task.delay(0.12, function()
-                        if not isOpen then optContainer.Visible = false end
+                    tw(ddArrow, {Rotation = 0}, 0.16)
+                    TS:Create(optWrap, COLLAPSE_INFO, {Size = UDim2.new(1, 0, 0, 0)}):Play()
+                    task.delay(0.16, function()
+                        if not isOpen then optWrap.Visible = false end
                     end)
                 end
 
@@ -1129,17 +1149,14 @@ function XiroLib:CreateWindow(config)
                     else
                         closeOpenDropdown()
                         isOpen = true
-                        optContainer.Visible = true
-                        tw(ddArrow, {Rotation = 180}, 0.18)
-                        openDropdown = closeThis
+                        optWrap.Size = UDim2.new(1, 0, 0, 0)
+                        optWrap.GroupTransparency = 0
+                        optWrap.Visible = true
                         buildOptions()
-                        for _, b in optContainer:GetChildren() do
-                            if b:IsA("TextButton") then
-                                b.BackgroundTransparency = 1
-                                b.TextTransparency = 1
-                                tw(b, {BackgroundTransparency = 0, TextTransparency = 0}, 0.18)
-                            end
-                        end
+                        task.wait() -- let UIListLayout position buttons before we tween
+                        tw(ddArrow, {Rotation = 180}, 0.22)
+                        TS:Create(optWrap, EXPAND_INFO, {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
+                        openDropdown = closeThis
                     end
                 end)
 
@@ -1834,15 +1851,23 @@ function XiroLib:CreateWindow(config)
             arrow.Rotation = 0
             arrow.Parent = mainRow
 
-            -- Options container
+            -- Options wrap (CanvasGroup — clips + tweenable size/transparency)
+            local optWrap = Instance.new("CanvasGroup")
+            optWrap.Name = "OptionsWrap"
+            optWrap.Size = UDim2.new(1, 0, 0, 0)
+            optWrap.BackgroundTransparency = 1
+            optWrap.ClipsDescendants = true
+            optWrap.GroupTransparency = 1
+            optWrap.Visible = false
+            optWrap.LayoutOrder = 1
+            optWrap.Parent = container
+
             local optContainer = Instance.new("Frame")
             optContainer.Name = "Options"
             optContainer.AutomaticSize = Enum.AutomaticSize.Y
             optContainer.Size = UDim2.new(1, 0, 0, 0)
             optContainer.BackgroundTransparency = 1
-            optContainer.Visible = false
-            optContainer.LayoutOrder = 1
-            optContainer.Parent = container
+            optContainer.Parent = optWrap
 
             local optLayout = Instance.new("UIListLayout")
             optLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1852,6 +1877,11 @@ function XiroLib:CreateWindow(config)
             local optPad = Instance.new("UIPadding")
             optPad.PaddingTop = UDim.new(0, 2)
             optPad.Parent = optContainer
+
+            local function getFullH()
+                local n = #options
+                return n * 24 + math.max(0, n - 1) + 2
+            end
 
             local function buildOptions()
                 for _, child in optContainer:GetChildren() do
@@ -1894,15 +1924,22 @@ function XiroLib:CreateWindow(config)
                             end
                         else
                             current = {opt}
-                            -- Close dropdown after single selection
-                            isOpen = false
-                            optContainer.Visible = false
-                            tw(arrow, {Rotation = 0}, 0.18)
                         end
                         valueLabel.Text = table.concat(current, ", ")
                         if flag then updateFlag(flag, current) end
                         if cfg.Callback then task.spawn(cfg.Callback, current) end
                         buildOptions()
+                        if not multi then
+                            isOpen = false
+                            tw(arrow, {Rotation = 0}, 0.16)
+                            TS:Create(optWrap, TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+                            task.delay(0.16, function()
+                                if not isOpen then optWrap.Visible = false end
+                            end)
+                            openDropdown = nil
+                        else
+                            TS:Create(optWrap, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
+                        end
                     end)
                 end
             end
@@ -1916,16 +1953,15 @@ function XiroLib:CreateWindow(config)
             mainBtn.Text = ""
             mainBtn.Parent = mainRow
 
+            local EXPAND_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            local COLLAPSE_INFO = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+
             local function closeThis()
                 isOpen = false
-                tw(arrow, {Rotation = 0}, 0.18)
-                for _, b in optContainer:GetChildren() do
-                    if b:IsA("TextButton") then
-                        tw(b, {BackgroundTransparency = 1, TextTransparency = 1}, 0.12)
-                    end
-                end
-                task.delay(0.12, function()
-                    if not isOpen then optContainer.Visible = false end
+                tw(arrow, {Rotation = 0}, 0.16)
+                TS:Create(optWrap, COLLAPSE_INFO, {Size = UDim2.new(1, 0, 0, 0)}):Play()
+                task.delay(0.16, function()
+                    if not isOpen then optWrap.Visible = false end
                 end)
             end
 
@@ -1936,17 +1972,14 @@ function XiroLib:CreateWindow(config)
                 else
                     closeOpenDropdown()
                     isOpen = true
-                    optContainer.Visible = true
-                    tw(arrow, {Rotation = 180}, 0.18)
-                    openDropdown = closeThis
+                    optWrap.Size = UDim2.new(1, 0, 0, 0)
+                    optWrap.GroupTransparency = 0
+                    optWrap.Visible = true
                     buildOptions()
-                    for _, b in optContainer:GetChildren() do
-                        if b:IsA("TextButton") then
-                            b.BackgroundTransparency = 1
-                            b.TextTransparency = 1
-                            tw(b, {BackgroundTransparency = 0, TextTransparency = 0}, 0.18)
-                        end
-                    end
+                    task.wait() -- let UIListLayout position buttons before we tween
+                    tw(arrow, {Rotation = 180}, 0.22)
+                    TS:Create(optWrap, EXPAND_INFO, {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
+                    openDropdown = closeThis
                 end
             end)
 
