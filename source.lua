@@ -354,25 +354,34 @@ function XiroLib:CreateWindow(config)
 
     local function fadeOutPanel(p, delay)
         local scale = ensurePanelScale(p)
+        local stroke = p:FindFirstChildOfClass("UIStroke")
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
             TS:Create(p, EASE_IN_QUART, {GroupTransparency = 1}):Play()
             TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
+            if stroke then
+                TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play()
+            end
         end)
     end
 
     local function fadeInPanel(p, delay)
         local scale = ensurePanelScale(p)
+        local stroke = p:FindFirstChildOfClass("UIStroke")
         scale.Scale = POP_START
         p.GroupTransparency = 1
+        if stroke then stroke.Transparency = 1 end
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
             TS:Create(p, EASE_OUT_QUART, {GroupTransparency = 0}):Play()
             TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play()
+            if stroke then
+                TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play()
+            end
         end)
     end
 
