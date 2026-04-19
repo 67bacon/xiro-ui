@@ -1041,12 +1041,12 @@ function XiroLib:CreateWindow(config)
                 ddArrow.Rotation = 0
                 ddArrow.Parent = mainRow
 
-                local optWrap = Instance.new("CanvasGroup")
+                local optWrap = Instance.new("Frame")
                 optWrap.Name = "OptionsWrap"
                 optWrap.Size = UDim2.new(1, 0, 0, 0)
                 optWrap.BackgroundTransparency = 1
+                optWrap.BorderSizePixel = 0
                 optWrap.ClipsDescendants = true
-                optWrap.GroupTransparency = 1
                 optWrap.Visible = false
                 optWrap.LayoutOrder = 1
                 optWrap.Parent = ddContainer
@@ -1150,7 +1150,6 @@ function XiroLib:CreateWindow(config)
                         closeOpenDropdown()
                         isOpen = true
                         optWrap.Size = UDim2.new(1, 0, 0, 0)
-                        optWrap.GroupTransparency = 0
                         optWrap.Visible = true
                         buildOptions()
                         task.wait() -- let UIListLayout position buttons before we tween
@@ -1851,13 +1850,13 @@ function XiroLib:CreateWindow(config)
             arrow.Rotation = 0
             arrow.Parent = mainRow
 
-            -- Options wrap (CanvasGroup — clips + tweenable size/transparency)
-            local optWrap = Instance.new("CanvasGroup")
+            -- Options wrap (clips + tweenable size)
+            local optWrap = Instance.new("Frame")
             optWrap.Name = "OptionsWrap"
             optWrap.Size = UDim2.new(1, 0, 0, 0)
             optWrap.BackgroundTransparency = 1
+            optWrap.BorderSizePixel = 0
             optWrap.ClipsDescendants = true
-            optWrap.GroupTransparency = 1
             optWrap.Visible = false
             optWrap.LayoutOrder = 1
             optWrap.Parent = container
@@ -1973,7 +1972,6 @@ function XiroLib:CreateWindow(config)
                     closeOpenDropdown()
                     isOpen = true
                     optWrap.Size = UDim2.new(1, 0, 0, 0)
-                    optWrap.GroupTransparency = 0
                     optWrap.Visible = true
                     buildOptions()
                     task.wait() -- let UIListLayout position buttons before we tween
