@@ -36,15 +36,15 @@ local C = {
 }
 
 ---------- LAYOUT CONSTANTS ----------
-local PANEL_W      = 235
+local PANEL_W      = 260
 local TITLE_H      = 32
-local ELEM_H       = 30
-local SLIDER_H     = 44
-local DROPDOWN_H   = 30
+local ELEM_H       = 32
+local SLIDER_H     = 46
+local DROPDOWN_H   = 46
 local SECTION_H    = 24
 local ACCORDION_H  = 28
-local PAD           = 6
-local GAP           = 3
+local PAD           = 8
+local GAP           = 4
 local CORNER_R      = 6
 local CORNER_SM     = 4
 local MAX_PANEL_CONTENT = 480
@@ -1007,26 +1007,26 @@ function XiroLib:CreateWindow(config)
                 addStroke(mainRow, 1, C.Border)
 
                 local nameLabel = Instance.new("TextLabel")
-                nameLabel.Size = UDim2.new(0.45, -8, 1, 0)
-                nameLabel.Position = UDim2.new(0, 10, 0, 0)
+                nameLabel.Size = UDim2.new(1, -32, 0, 18)
+                nameLabel.Position = UDim2.new(0, 10, 0, 4)
                 nameLabel.BackgroundTransparency = 1
                 nameLabel.Text = cfg.Name or "Dropdown"
-                nameLabel.TextColor3 = C.Text
+                nameLabel.TextColor3 = C.SubText
                 nameLabel.Font = FONT
-                nameLabel.TextSize = FSIZE
+                nameLabel.TextSize = FSIZE_SMALL
                 nameLabel.TextXAlignment = Enum.TextXAlignment.Left
                 nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
                 nameLabel.Parent = mainRow
 
                 local valueLabel = Instance.new("TextLabel")
-                valueLabel.Size = UDim2.new(0.55, -28, 1, 0)
-                valueLabel.Position = UDim2.new(0.45, 0, 0, 0)
+                valueLabel.Size = UDim2.new(1, -32, 0, 18)
+                valueLabel.Position = UDim2.new(0, 10, 0, 22)
                 valueLabel.BackgroundTransparency = 1
                 valueLabel.Text = table.concat(current, ", ")
                 valueLabel.TextColor3 = C.Accent
-                valueLabel.Font = FONT
-                valueLabel.TextSize = FSIZE_SMALL
-                valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+                valueLabel.Font = FONT_SEMI
+                valueLabel.TextSize = FSIZE
+                valueLabel.TextXAlignment = Enum.TextXAlignment.Left
                 valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
                 valueLabel.Parent = mainRow
 
