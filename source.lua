@@ -1,4 +1,4 @@
---VER=1
+--VER=2
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -36,6 +36,20 @@ local C = {
     Notif       = Color3.fromRGB(28, 28, 38),
 }
 
+local THEMES = {
+    Amethyst = {Accent=Color3.fromRGB(140,100,255), AccentDark=Color3.fromRGB(100,70,200), ToggleOn=Color3.fromRGB(140,100,255), SliderFill=Color3.fromRGB(140,100,255), SectionText=Color3.fromRGB(110,100,160)},
+    Cyan     = {Accent=Color3.fromRGB(80,200,230),  AccentDark=Color3.fromRGB(50,150,180), ToggleOn=Color3.fromRGB(80,200,230),  SliderFill=Color3.fromRGB(80,200,230),  SectionText=Color3.fromRGB(100,160,180)},
+    Crimson  = {Accent=Color3.fromRGB(255,80,100),  AccentDark=Color3.fromRGB(200,50,70),  ToggleOn=Color3.fromRGB(255,80,100),  SliderFill=Color3.fromRGB(255,80,100),  SectionText=Color3.fromRGB(180,100,110)},
+    Emerald  = {Accent=Color3.fromRGB(80,220,130),  AccentDark=Color3.fromRGB(50,170,100), ToggleOn=Color3.fromRGB(80,220,130),  SliderFill=Color3.fromRGB(80,220,130),  SectionText=Color3.fromRGB(100,170,130)},
+    Amber    = {Accent=Color3.fromRGB(255,180,80),  AccentDark=Color3.fromRGB(200,140,50), ToggleOn=Color3.fromRGB(255,180,80),  SliderFill=Color3.fromRGB(255,180,80),  SectionText=Color3.fromRGB(180,150,100)},
+    Rose     = {Accent=Color3.fromRGB(255,130,180), AccentDark=Color3.fromRGB(200,90,140), ToggleOn=Color3.fromRGB(255,130,180), SliderFill=Color3.fromRGB(255,130,180), SectionText=Color3.fromRGB(180,130,160)},
+}
+
+local function applyTheme(name)
+    local t = THEMES[name] or THEMES.Amethyst
+    for k, v in pairs(t) do C[k] = v end
+end
+
 ---------- LAYOUT CONSTANTS ----------
 local PANEL_W      = 260
 local TITLE_H      = 32
@@ -71,6 +85,42 @@ local openDropdown    = nil -- currently open dropdown closer
 local savedMouseBehavior = nil
 local FADE_STAGGER    = 0.05 -- stagger delay between panel fade-ins
 local FADE_STAGGER_OUT = 0.025 -- stagger delay for fade-out (稍快，收得干脆)
+
+---------- PANEL STATE PERSISTENCE ----------
+local _panelStateFile = "xiro_panel_state.json"
+local _panelStates = {}
+local _panelSavePending = false
+
+local function _loadPanelStates()
+    if not (isfile and readfile) then return end
+    local ok, exists = pcall(isfile, _panelStateFile)
+    if not ok or not exists then return end
+    local rok, raw = pcall(readfile, _panelStateFile)
+    if not rok or type(raw) ~= "string" then return end
+    local dok, data = pcall(function() return HttpService:JSONDecode(raw) end)
+    if dok and type(data) == "table" then _panelStates = data end
+end
+
+local function _flushPanelStates()
+    if not writefile then return end
+    pcall(function() writefile(_panelStateFile, HttpService:JSONEncode(_panelStates)) end)
+end
+
+local function _savePanelState(name, x, y, minimized)
+    if type(name) ~= "string" then return end
+    _panelStates[name] = _panelStates[name] or {}
+    if x ~= nil then _panelStates[name].x = x end
+    if y ~= nil then _panelStates[name].y = y end
+    if minimized ~= nil then _panelStates[name].min = minimized end
+    if _panelSavePending then return end
+    _panelSavePending = true
+    task.delay(0.3, function()
+        _panelSavePending = false
+        _flushPanelStates()
+    end)
+end
+
+_loadPanelStates()
 
 ---------- INPUT DISPATCHER ----------
 -- Consolidate global UIS listeners: handlers opt in only while active,
@@ -131,7 +181,7 @@ local function snapVal(val, mn, mx, inc)
     return math.clamp(val, mn, mx)
 end
 
-local function makeDraggable(frame, handle)
+local function makeDraggable(frame, handle, onDragEnd)
     local dragStart, startPos
     local moveFn
     moveFn = function(input)
@@ -149,9 +199,31 @@ local function makeDraggable(frame, handle)
             zCounter = zCounter + 1
             frame.ZIndex = zCounter
             moveHandlers[moveFn] = true
+
+            -- Visual feedback: fade + accent stroke
+            local stroke = frame:FindFirstChildOfClass("UIStroke")
+            local origStrokeColor, origStrokeThick
+            if stroke then
+                origStrokeColor = stroke.Color
+                origStrokeThick = stroke.Thickness
+                tw(stroke, {Color = C.Accent, Thickness = 2}, 0.12)
+            end
+            if frame:IsA("CanvasGroup") then
+                tw(frame, {GroupTransparency = 0.12}, 0.12)
+            end
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     moveHandlers[moveFn] = nil
+                    if stroke then
+                        tw(stroke, {Color = origStrokeColor, Thickness = origStrokeThick}, 0.18)
+                    end
+                    if frame:IsA("CanvasGroup") then
+                        tw(frame, {GroupTransparency = 0}, 0.18)
+                    end
+                    if onDragEnd then
+                        pcall(onDragEnd, frame.Position.X.Offset, frame.Position.Y.Offset)
+                    end
                 end
             end)
         end
@@ -279,6 +351,7 @@ function XiroLib:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Xiro"
     toggleKeybind = config.ToggleUIKeybind or Enum.KeyCode.RightShift
+    applyTheme(config.Theme)
 
     if config.ConfigurationSaving and config.ConfigurationSaving.Enabled then
         configEnabled = true
@@ -488,7 +561,12 @@ function XiroLib:CreateWindow(config)
         local panel = Instance.new("CanvasGroup")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
-        panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
+        local _saved = _panelStates[tabName]
+        if _saved and _saved.x and _saved.y then
+            panel.Position = UDim2.new(0, _saved.x, 0, _saved.y)
+        else
+            panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
+        end
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = true
@@ -594,10 +672,24 @@ function XiroLib:CreateWindow(config)
                     resizeFn()
                 end)
             end
+            _savePanelState(tabName, nil, nil, minimized)
         end)
 
-        -- Make draggable
-        makeDraggable(panel, titleBar)
+        -- Restore minimized state
+        if _saved and _saved.min == true then
+            task.defer(function()
+                minimized = true
+                minBtn.Rotation = -90
+                setResizeSuppress(true)
+                panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H)
+                scrollFrame.Visible = false
+            end)
+        end
+
+        -- Make draggable (saves position on drag end)
+        makeDraggable(panel, titleBar, function(x, y)
+            _savePanelState(tabName, x, y, nil)
+        end)
 
         table.insert(panels, panel)
 
@@ -758,9 +850,18 @@ function XiroLib:CreateWindow(config)
                 addCorner(frame, CORNER_SM)
                 addStroke(frame, 1, C.Border)
 
+                local stripe = Instance.new("Frame")
+                stripe.Size = UDim2.new(0, 3, 1, -10)
+                stripe.Position = UDim2.new(0, 0, 0, 5)
+                stripe.BackgroundColor3 = C.Accent
+                stripe.BackgroundTransparency = enabled and 0 or 1
+                stripe.BorderSizePixel = 0
+                stripe.Parent = frame
+                addCorner(stripe, 2)
+
                 local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, -48, 1, 0)
-                label.Position = UDim2.new(0, 10, 0, 0)
+                label.Size = UDim2.new(1, -52, 1, 0)
+                label.Position = UDim2.new(0, 14, 0, 0)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Toggle"
                 label.TextColor3 = C.Text
@@ -790,6 +891,7 @@ function XiroLib:CreateWindow(config)
                 local function updateVisual()
                     tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
                     tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
+                    tw(stripe, {BackgroundTransparency = enabled and 0 or 1}, 0.18)
                 end
 
                 local btn = Instance.new("TextButton")
