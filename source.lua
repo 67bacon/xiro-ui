@@ -1,3 +1,4 @@
+--VER=1
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
