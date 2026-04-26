@@ -1,4 +1,4 @@
---VER=6
+--VER=7
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -76,6 +76,8 @@ local flagStore       = {} -- flag -> {value, set}
 local panels          = {}
 local panelCount      = 0
 local accordionRegistry = setmetatable({}, {__mode = "k"}) -- scrollFrame -> list of accordion entries
+local pulseStripes      = setmetatable({}, {__mode = "k"}) -- shared-phase pulse driver registry
+local pulseDriverConn   = nil
 local zCounter        = 10
 local configEnabled   = false
 local configFolder    = ""
@@ -122,6 +124,41 @@ local function _savePanelState(name, x, y, minimized)
 end
 
 _loadPanelStates()
+
+---------- SHARED PULSE DRIVER ----------
+-- All enabled-toggle stripes share one phase so they pulse in sync.
+local PULSE_PERIOD = 0.9 -- seconds per half-cycle (matches old tween)
+local PULSE_MIN = 0.0    -- transparency at peak brightness
+local PULSE_MAX = 0.55   -- transparency at dim
+local function _ensurePulseDriver()
+    if pulseDriverConn then return end
+    pulseDriverConn = RunService.Heartbeat:Connect(function()
+        local t = tick()
+        -- 0..1 sine wave with period 2*PULSE_PERIOD (one full reverse cycle)
+        local phase = (math.sin(t * math.pi / PULSE_PERIOD) + 1) * 0.5
+        local trans = PULSE_MIN + (PULSE_MAX - PULSE_MIN) * phase
+        local any = false
+        for stripe in pairs(pulseStripes) do
+            if stripe.Parent then
+                stripe.BackgroundTransparency = trans
+                any = true
+            else
+                pulseStripes[stripe] = nil
+            end
+        end
+        if not any then
+            pulseDriverConn:Disconnect()
+            pulseDriverConn = nil
+        end
+    end)
+end
+local function pulseAdd(stripe)
+    pulseStripes[stripe] = true
+    _ensurePulseDriver()
+end
+local function pulseRemove(stripe)
+    pulseStripes[stripe] = nil
+end
 
 ---------- INPUT DISPATCHER ----------
 -- Consolidate global UIS listeners: handlers opt in only while active,
@@ -919,22 +956,8 @@ function XiroLib:CreateWindow(config)
                 stripe.Parent = frame
                 addCorner(stripe, 2)
 
-                local pulseTween
-                local function stopPulse()
-                    if pulseTween then
-                        pulseTween:Cancel()
-                        pulseTween = nil
-                    end
-                end
-                local function startPulse()
-                    stopPulse()
-                    pulseTween = TS:Create(
-                        stripe,
-                        TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, 0),
-                        {BackgroundTransparency = 0.55}
-                    )
-                    pulseTween:Play()
-                end
+                local function startPulse() pulseAdd(stripe) end
+                local function stopPulse() pulseRemove(stripe) end
                 if enabled then startPulse() end
 
                 local label = Instance.new("TextLabel")
