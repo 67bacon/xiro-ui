@@ -1,4 +1,4 @@
---VER=20
+--VER=21
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -790,7 +790,9 @@ function XiroLib:CreateWindow(config)
                 t.Completed:Connect(function()
                     animating = false
                     container.ClipsDescendants = false
-                    container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    task.defer(function()
+                        container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    end)
                 end)
             end
 
@@ -834,7 +836,7 @@ function XiroLib:CreateWindow(config)
                 setResizeSuppress(true)
                 -- scrollFrame.Size relative; CanvasSize handled by AutomaticCanvasSize.
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
-                task.delay(dur + 0.02, function()
+                task.delay(dur + 0.12, function()
                     setResizeSuppress(false)
                     resizeFn()
                 end)
