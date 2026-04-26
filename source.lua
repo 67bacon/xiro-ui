@@ -817,19 +817,9 @@ function XiroLib:CreateWindow(config)
             headerBtn.Text = ""
             headerBtn.Parent = header
 
-            -- Tween panel.Size in lockstep with the accordion to prevent jitter.
-            -- Per-frame bindPanelResize is suppressed during the animation, then resync at end.
-            local function tweenPanelToContent(deltaH, dur)
-                setResizeSuppress(true)
-                local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
-                local currentContentH = (sfLayout and sfLayout.AbsoluteContentSize.Y or 0) + PAD * 2
-                local newContentH = currentContentH + deltaH
-                local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
-                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
-                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
-                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
-            end
-
+            -- Animate ONLY the accordion's own container.Size.
+            -- The click handler orchestrates panel/scrollFrame/canvas tweens at the
+            -- transaction level so sibling-close + self-expand share ONE coherent panel tween.
             local function doExpand()
                 if isExpanded or animating then return end
                 isExpanded = true
@@ -838,8 +828,6 @@ function XiroLib:CreateWindow(config)
                 tw(header, {BackgroundColor3 = C.Elem}, 0.12)
                 local contentH = contentInnerLayout.AbsoluteContentSize.Y
                 local targetH = ACCORDION_H + GAP + contentH
-                local deltaH = targetH - ACCORDION_H
-                tweenPanelToContent(deltaH, 0.2)
                 local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
                 for _, d in content:GetDescendants() do
                     if d:IsA("TextLabel") or d:IsA("TextButton") then
@@ -851,26 +839,6 @@ function XiroLib:CreateWindow(config)
                     animating = false
                     container.ClipsDescendants = false
                     container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
-                    setResizeSuppress(false)
-                    resizeFn() -- resync panel/canvas to final content
-                    -- Auto-scroll: bring this accordion's top into view
-                    task.wait()
-                    local viewTopY = scrollFrame.AbsolutePosition.Y
-                    local viewH = scrollFrame.AbsoluteSize.Y
-                    local containerTopY = container.AbsolutePosition.Y
-                    local containerH = container.AbsoluteSize.Y
-                    local relTop = containerTopY - viewTopY
-                    local maxCanvas = math.max(0, scrollFrame.AbsoluteCanvasSize.Y - viewH)
-                    local newY = scrollFrame.CanvasPosition.Y
-                    if relTop < 0 or containerH > viewH then
-                        newY = scrollFrame.CanvasPosition.Y + relTop - PAD
-                    elseif relTop + containerH > viewH then
-                        newY = scrollFrame.CanvasPosition.Y + (relTop + containerH - viewH) + PAD
-                    end
-                    newY = math.clamp(newY, 0, maxCanvas)
-                    if math.abs(newY - scrollFrame.CanvasPosition.Y) > 1 then
-                        tw(scrollFrame, {CanvasPosition = Vector2.new(0, newY)}, 0.18)
-                    end
                 end)
             end
 
@@ -881,15 +849,8 @@ function XiroLib:CreateWindow(config)
                 tw(arrow, {Rotation = 0}, 0.18)
                 tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
                 container.ClipsDescendants = true
-                local currentContentH = contentInnerLayout.AbsoluteContentSize.Y
-                local deltaH = -(ACCORDION_H + GAP + currentContentH - ACCORDION_H)
-                tweenPanelToContent(deltaH, 0.2)
                 local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
-                t.Completed:Connect(function()
-                    animating = false
-                    setResizeSuppress(false)
-                    resizeFn() -- resync after collapse
-                end)
+                t.Completed:Connect(function() animating = false end)
             end
 
             -- Register this accordion so siblings can be closed on overflow
@@ -908,19 +869,40 @@ function XiroLib:CreateWindow(config)
             end
             table.insert(registryList, entry)
 
+            -- Single-shot panel tween for a click "transaction" (covers self ± closed siblings).
+            -- Suppresses per-frame resize during the 0.2s animation, resyncs at end.
+            local function tweenPanelByDelta(deltaH, dur)
+                if deltaH == 0 then return end
+                local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
+                local currentContentH = (sfLayout and sfLayout.AbsoluteContentSize.Y or 0) + PAD * 2
+                local newContentH = math.max(0, currentContentH + deltaH)
+                local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
+                setResizeSuppress(true)
+                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
+                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
+                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
+                task.delay(dur + 0.02, function()
+                    setResizeSuppress(false)
+                    resizeFn() -- final resync
+                end)
+            end
+
             headerBtn.MouseButton1Click:Connect(function()
                 if animating then return end
                 if isExpanded then
+                    -- Collapse: panel shrinks by (GAP + this accordion's inner content)
+                    local h = contentInnerLayout.AbsoluteContentSize.Y
+                    tweenPanelByDelta(-(GAP + h), 0.2)
                     doCollapse()
                     return
                 end
-                -- About to expand: only close siblings if total would exceed MAX_PANEL_CONTENT
-                -- (panel auto-resizes to content up to that cap, beyond which a scrollbar appears)
+                -- About to expand: close siblings if total would exceed MAX_PANEL_CONTENT.
                 local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
                 local maxH = MAX_PANEL_CONTENT
                 local currentContentH = sfLayout and sfLayout.AbsoluteContentSize.Y or 0
                 local thisExpandedH = ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y
                 local predicted = currentContentH - ACCORDION_H + thisExpandedH
+                local netDelta = thisExpandedH - ACCORDION_H -- this accordion's growth
                 if predicted > maxH then
                     local list = accordionRegistry[scrollFrame] or {}
                     for _, e in list do
@@ -928,11 +910,33 @@ function XiroLib:CreateWindow(config)
                         if e.container ~= container and e.isExpanded() then
                             local saved = e.expandedHeight()
                             e.collapse()
-                            predicted = predicted - (saved - ACCORDION_H)
+                            local siblingShrink = saved - ACCORDION_H
+                            predicted = predicted - siblingShrink
+                            netDelta = netDelta - siblingShrink
                         end
                     end
                 end
+                tweenPanelByDelta(netDelta, 0.2)
                 doExpand()
+                -- Auto-scroll after expand+panel tweens settle
+                task.delay(0.22, function()
+                    local viewTopY = scrollFrame.AbsolutePosition.Y
+                    local viewH = scrollFrame.AbsoluteSize.Y
+                    local containerTopY = container.AbsolutePosition.Y
+                    local containerH = container.AbsoluteSize.Y
+                    local relTop = containerTopY - viewTopY
+                    local maxCanvas = math.max(0, scrollFrame.AbsoluteCanvasSize.Y - viewH)
+                    local newY = scrollFrame.CanvasPosition.Y
+                    if relTop < 0 or containerH > viewH then
+                        newY = scrollFrame.CanvasPosition.Y + relTop - PAD
+                    elseif relTop + containerH > viewH then
+                        newY = scrollFrame.CanvasPosition.Y + (relTop + containerH - viewH) + PAD
+                    end
+                    newY = math.clamp(newY, 0, maxCanvas)
+                    if math.abs(newY - scrollFrame.CanvasPosition.Y) > 1 then
+                        tw(scrollFrame, {CanvasPosition = Vector2.new(0, newY)}, 0.18)
+                    end
+                end)
             end)
 
             -- Live-resize accordion when inner content (e.g. dropdown options) grows/shrinks
