@@ -1,4 +1,4 @@
---VER=22
+--VER=23
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -543,15 +543,21 @@ function XiroLib:CreateWindow(config)
     accentLine.ZIndex = 1000
     accentLine.Parent = loadScreen
 
+    loadTitle.TextTransparency = 1
+    loadSub.TextTransparency = 1
     panelContainer.Visible = false
     task.spawn(function()
-        tw(accentLine, {Size = UDim2.new(0, 220, 0, 2)}, 0.25)
-        task.wait(0.25)
-        tw(loadScreen, {BackgroundTransparency = 1}, 0.2)
-        tw(loadTitle, {TextTransparency = 1}, 0.2)
-        tw(loadSub, {TextTransparency = 1}, 0.2)
-        tw(accentLine, {BackgroundTransparency = 1}, 0.2)
-        task.wait(0.2)
+        tw(loadTitle, {TextTransparency = 0}, 0.3)
+        task.wait(0.15)
+        tw(loadSub, {TextTransparency = 0}, 0.3)
+        task.wait(0.1)
+        tw(accentLine, {Size = UDim2.new(0, 220, 0, 2)}, 0.45)
+        task.wait(0.6)
+        tw(loadScreen, {BackgroundTransparency = 1}, 0.3)
+        tw(loadTitle, {TextTransparency = 1}, 0.3)
+        tw(loadSub, {TextTransparency = 1}, 0.3)
+        tw(accentLine, {BackgroundTransparency = 1}, 0.3)
+        task.wait(0.3)
         loadScreen:Destroy()
         panelContainer.Visible = true
         unlockMouse()
@@ -779,7 +785,7 @@ function XiroLib:CreateWindow(config)
                 tw(arrow, {Rotation = 90}, 0.18)
                 tw(header, {BackgroundColor3 = C.Elem}, 0.12)
                 local contentH = contentInnerLayout.AbsoluteContentSize.Y
-                local targetH = ACCORDION_H + GAP + contentH
+                local targetH = math.floor(ACCORDION_H + GAP + contentH + 0.5)
                 local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
                 for _, d in content:GetDescendants() do
                     if d:IsA("TextLabel") or d:IsA("TextButton") then
@@ -791,7 +797,7 @@ function XiroLib:CreateWindow(config)
                     animating = false
                     container.ClipsDescendants = false
                     task.defer(function()
-                        container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                        container.Size = UDim2.new(1, 0, 0, math.floor(ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y + 0.5))
                     end)
                 end)
             end
@@ -813,7 +819,7 @@ function XiroLib:CreateWindow(config)
                 isExpanded = function() return isExpanded end,
                 collapse = doCollapse,
                 expandedHeight = function()
-                    return ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y
+                    return math.floor(ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y + 0.5)
                 end,
             }
             local registryList = accordionRegistry[scrollFrame]
@@ -880,7 +886,7 @@ function XiroLib:CreateWindow(config)
             -- Live-resize accordion when inner content (e.g. dropdown options) grows/shrinks
             contentInnerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
                 if isExpanded and not animating then
-                    container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    container.Size = UDim2.new(1, 0, 0, math.floor(ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y + 0.5))
                 end
             end)
 
