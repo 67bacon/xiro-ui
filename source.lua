@@ -1,4 +1,4 @@
---VER=21
+--VER=22
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -545,13 +545,13 @@ function XiroLib:CreateWindow(config)
 
     panelContainer.Visible = false
     task.spawn(function()
-        tw(accentLine, {Size = UDim2.new(0, 220, 0, 2)}, 1)
-        task.wait(1.8)
-        tw(loadScreen, {BackgroundTransparency = 1}, 0.4)
-        tw(loadTitle, {TextTransparency = 1}, 0.4)
-        tw(loadSub, {TextTransparency = 1}, 0.4)
-        tw(accentLine, {BackgroundTransparency = 1}, 0.4)
-        task.wait(0.4)
+        tw(accentLine, {Size = UDim2.new(0, 220, 0, 2)}, 0.25)
+        task.wait(0.25)
+        tw(loadScreen, {BackgroundTransparency = 1}, 0.2)
+        tw(loadTitle, {TextTransparency = 1}, 0.2)
+        tw(loadSub, {TextTransparency = 1}, 0.2)
+        tw(accentLine, {BackgroundTransparency = 1}, 0.2)
+        task.wait(0.2)
         loadScreen:Destroy()
         panelContainer.Visible = true
         unlockMouse()
