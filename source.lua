@@ -1,4 +1,4 @@
---VER=17
+--VER=18
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -89,41 +89,11 @@ local savedMouseBehavior = nil
 local FADE_STAGGER    = 0.05 -- stagger delay between panel fade-ins
 local FADE_STAGGER_OUT = 0.025 -- stagger delay for fade-out (稍快，收得干脆)
 
----------- PANEL STATE PERSISTENCE ----------
-local _panelStateFile = "xiro_panel_state.json"
-local _panelStates = {}
-local _panelSavePending = false
-
-local function _loadPanelStates()
-    if not (isfile and readfile) then return end
-    local ok, exists = pcall(isfile, _panelStateFile)
-    if not ok or not exists then return end
-    local rok, raw = pcall(readfile, _panelStateFile)
-    if not rok or type(raw) ~= "string" then return end
-    local dok, data = pcall(function() return HttpService:JSONDecode(raw) end)
-    if dok and type(data) == "table" then _panelStates = data end
+-- panel state persistence removed (didn't survive Roblox rejoins, pure overhead)
+-- defensive: clean up the legacy file if it still exists
+if delfile and isfile then
+    pcall(function() if isfile("xiro_panel_state.json") then delfile("xiro_panel_state.json") end end)
 end
-
-local function _flushPanelStates()
-    if not writefile then return end
-    pcall(function() writefile(_panelStateFile, HttpService:JSONEncode(_panelStates)) end)
-end
-
-local function _savePanelState(name, x, y, minimized)
-    if type(name) ~= "string" then return end
-    _panelStates[name] = _panelStates[name] or {}
-    if x ~= nil then _panelStates[name].x = x end
-    if y ~= nil then _panelStates[name].y = y end
-    if minimized ~= nil then _panelStates[name].min = minimized end
-    if _panelSavePending then return end
-    _panelSavePending = true
-    task.delay(0.3, function()
-        _panelSavePending = false
-        _flushPanelStates()
-    end)
-end
-
-_loadPanelStates()
 
 ---------- SHARED PULSE DRIVER ----------
 -- All enabled-toggle stripes share one phase so they pulse in sync.
@@ -600,12 +570,7 @@ function XiroLib:CreateWindow(config)
         local panel = Instance.new("CanvasGroup")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
-        local _saved = _panelStates[tabName]
-        if _saved and _saved.x and _saved.y then
-            panel.Position = UDim2.new(0, math.floor(_saved.x + 0.5), 0, math.floor(_saved.y + 0.5))
-        else
-            panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
-        end
+        panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = true
@@ -713,24 +678,10 @@ function XiroLib:CreateWindow(config)
                     resizeFn()
                 end)
             end
-            _savePanelState(tabName, nil, nil, minimized)
         end)
 
-        -- Restore minimized state
-        if _saved and _saved.min == true then
-            task.defer(function()
-                minimized = true
-                minBtn.Rotation = -90
-                setResizeSuppress(true)
-                panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H)
-                scrollFrame.Visible = false
-            end)
-        end
-
-        -- Make draggable (saves position on drag end)
-        makeDraggable(panel, titleBar, function(x, y)
-            _savePanelState(tabName, x, y, nil)
-        end)
+        -- Make draggable (no position persistence)
+        makeDraggable(panel, titleBar)
 
         table.insert(panels, panel)
 
