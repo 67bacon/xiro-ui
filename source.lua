@@ -1,4 +1,4 @@
---VER=14
+--VER=15
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -600,7 +600,7 @@ function XiroLib:CreateWindow(config)
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         local _saved = _panelStates[tabName]
         if _saved and _saved.x and _saved.y then
-            panel.Position = UDim2.new(0, _saved.x, 0, _saved.y)
+            panel.Position = UDim2.new(0, math.floor(_saved.x + 0.5), 0, math.floor(_saved.y + 0.5))
         else
             panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         end
@@ -668,6 +668,7 @@ function XiroLib:CreateWindow(config)
         scrollFrame.ScrollBarThickness = 3
         scrollFrame.ScrollBarImageColor3 = C.ScrollBar
         scrollFrame.ScrollBarImageTransparency = 0.3
+        scrollFrame.VerticalScrollBarInset = Enum.ScrollingFrameInset.Always
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         -- NOTE: do NOT enable AutomaticCanvasSize — bindPanelResize manages CanvasSize
         -- manually. Having both fight causes per-frame jitter during accordion expand.
