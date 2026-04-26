@@ -1,4 +1,4 @@
---VER=4
+--VER=5
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -62,7 +62,7 @@ local PAD           = 8
 local GAP           = 4
 local CORNER_R      = 6
 local CORNER_SM     = 4
-local MAX_PANEL_CONTENT = 480
+local MAX_PANEL_CONTENT = 720
 local FONT          = Enum.Font.Gotham
 local FONT_BOLD     = Enum.Font.GothamBold
 local FONT_SEMI     = Enum.Font.GothamSemibold
