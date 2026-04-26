@@ -1,4 +1,4 @@
---VER=3
+--VER=4
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -852,18 +852,17 @@ function XiroLib:CreateWindow(config)
                     doCollapse()
                     return
                 end
-                -- About to expand: predict overflow and close other expanded accordions if needed
+                -- About to expand: only close siblings if total would exceed MAX_PANEL_CONTENT
+                -- (panel auto-resizes to content up to that cap, beyond which a scrollbar appears)
                 local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
-                local viewH = scrollFrame.AbsoluteSize.Y
-                if viewH <= 0 then viewH = MAX_PANEL_CONTENT end
+                local maxH = MAX_PANEL_CONTENT
                 local currentContentH = sfLayout and sfLayout.AbsoluteContentSize.Y or 0
                 local thisExpandedH = ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y
                 local predicted = currentContentH - ACCORDION_H + thisExpandedH
-                if predicted > viewH then
-                    -- Close OTHER expanded accordions until predicted fits (or none left)
+                if predicted > maxH then
                     local list = accordionRegistry[scrollFrame] or {}
                     for _, e in list do
-                        if predicted <= viewH then break end
+                        if predicted <= maxH then break end
                         if e.container ~= container and e.isExpanded() then
                             local saved = e.expandedHeight()
                             e.collapse()
