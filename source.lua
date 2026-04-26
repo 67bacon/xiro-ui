@@ -1,4 +1,4 @@
---VER=18
+--VER=19
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -344,7 +344,7 @@ local function bindPanelResize(panel, titleBar, scrollFrame, layout)
         if suppress then return end
         local contentH = math.floor(layout.AbsoluteContentSize.Y + PAD * 2 + 0.5)
         local visH = math.min(contentH, MAX_PANEL_CONTENT)
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentH)
+        -- CanvasSize managed by AutomaticCanvasSize=Y; only adjust panel.Size here.
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + visH)
     end
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
@@ -637,8 +637,7 @@ function XiroLib:CreateWindow(config)
         scrollFrame.ScrollBarImageTransparency = 0.3
         scrollFrame.VerticalScrollBarInset = Enum.ScrollBarInset.Always
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-        -- NOTE: do NOT enable AutomaticCanvasSize — bindPanelResize manages CanvasSize
-        -- manually. Having both fight causes per-frame jitter during accordion expand.
+        scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
         scrollFrame.Parent = panel
 
         local contentLayout = Instance.new("UIListLayout")
@@ -833,12 +832,11 @@ function XiroLib:CreateWindow(config)
                 local newContentH = math.floor(math.max(0, currentContentH + deltaH) + 0.5)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
-                -- scrollFrame.Size is relative (1, 0, 1, -TITLE_H) — auto-tracks panel.Size
+                -- scrollFrame.Size relative; CanvasSize handled by AutomaticCanvasSize.
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
-                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
                 task.delay(dur + 0.02, function()
                     setResizeSuppress(false)
-                    resizeFn() -- final resync
+                    resizeFn()
                 end)
             end
 
@@ -873,25 +871,8 @@ function XiroLib:CreateWindow(config)
                 end
                 tweenPanelByDelta(netDelta, 0.2)
                 doExpand()
-                -- Auto-scroll after expand+panel tweens settle
-                task.delay(0.22, function()
-                    local viewTopY = scrollFrame.AbsolutePosition.Y
-                    local viewH = scrollFrame.AbsoluteSize.Y
-                    local containerTopY = container.AbsolutePosition.Y
-                    local containerH = container.AbsoluteSize.Y
-                    local relTop = containerTopY - viewTopY
-                    local maxCanvas = math.max(0, scrollFrame.AbsoluteCanvasSize.Y - viewH)
-                    local newY = scrollFrame.CanvasPosition.Y
-                    if relTop < 0 or containerH > viewH then
-                        newY = scrollFrame.CanvasPosition.Y + relTop - PAD
-                    elseif relTop + containerH > viewH then
-                        newY = scrollFrame.CanvasPosition.Y + (relTop + containerH - viewH) + PAD
-                    end
-                    newY = math.clamp(newY, 0, maxCanvas)
-                    if math.abs(newY - scrollFrame.CanvasPosition.Y) > 1 then
-                        tw(scrollFrame, {CanvasPosition = Vector2.new(0, newY)}, 0.18)
-                    end
-                end)
+                -- Auto-scroll removed: it was the second 0.18s tween chained after expand,
+                -- which on right-3 panels (with scrollbar) looked like "jelly shake".
             end)
 
             -- Live-resize accordion when inner content (e.g. dropdown options) grows/shrinks
