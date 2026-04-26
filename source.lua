@@ -1,4 +1,4 @@
---VER=19
+--VER=20
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -573,7 +573,7 @@ function XiroLib:CreateWindow(config)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
-        panel.ClipsDescendants = true
+        panel.ClipsDescendants = false
         panel.GroupTransparency = 0
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
