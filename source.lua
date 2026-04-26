@@ -1,4 +1,4 @@
---VER=5
+--VER=6
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -919,6 +919,24 @@ function XiroLib:CreateWindow(config)
                 stripe.Parent = frame
                 addCorner(stripe, 2)
 
+                local pulseTween
+                local function stopPulse()
+                    if pulseTween then
+                        pulseTween:Cancel()
+                        pulseTween = nil
+                    end
+                end
+                local function startPulse()
+                    stopPulse()
+                    pulseTween = TS:Create(
+                        stripe,
+                        TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, 0),
+                        {BackgroundTransparency = 0.55}
+                    )
+                    pulseTween:Play()
+                end
+                if enabled then startPulse() end
+
                 local label = Instance.new("TextLabel")
                 label.Size = UDim2.new(1, -52, 1, 0)
                 label.Position = UDim2.new(0, 14, 0, 0)
@@ -951,7 +969,12 @@ function XiroLib:CreateWindow(config)
                 local function updateVisual()
                     tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
                     tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
-                    tw(stripe, {BackgroundTransparency = enabled and 0 or 1}, 0.18)
+                    if enabled then
+                        startPulse()
+                    else
+                        stopPulse()
+                        tw(stripe, {BackgroundTransparency = 1}, 0.18)
+                    end
                 end
 
                 local btn = Instance.new("TextButton")
@@ -2513,6 +2536,23 @@ function XiroLib:CreateWindow(config)
     --==================================================
     function Window:Notify(cfg) -- also accessible as XiroLib:Notify
         XiroLib:Notify(cfg)
+    end
+
+    --==================================================
+    --               FLAG ACCESS API
+    --==================================================
+    function Window:SetFlag(flag, value)
+        local entry = flagStore[flag]
+        if entry and entry.set then task.spawn(entry.set, value) end
+    end
+    function Window:GetFlag(flag)
+        local entry = flagStore[flag]
+        return entry and entry.value
+    end
+    function Window:GetAllFlags()
+        local copy = {}
+        for k, v in pairs(flagStore) do copy[k] = v.value end
+        return copy
     end
 
     --==================================================
