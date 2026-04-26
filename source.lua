@@ -1,4 +1,4 @@
---VER=2
+--VER=3
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -75,6 +75,7 @@ local screenGui, panelContainer, notifContainer
 local flagStore       = {} -- flag -> {value, set}
 local panels          = {}
 local panelCount      = 0
+local accordionRegistry = setmetatable({}, {__mode = "k"}) -- scrollFrame -> list of accordion entries
 local zCounter        = 10
 local configEnabled   = false
 local configFolder    = ""
@@ -778,39 +779,99 @@ function XiroLib:CreateWindow(config)
             headerBtn.Text = ""
             headerBtn.Parent = header
 
+            local function doExpand()
+                if isExpanded or animating then return end
+                isExpanded = true
+                animating = true
+                tw(arrow, {Rotation = 90}, 0.18)
+                tw(header, {BackgroundColor3 = C.Elem}, 0.12)
+                local contentH = contentInnerLayout.AbsoluteContentSize.Y
+                local targetH = ACCORDION_H + GAP + contentH
+                local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
+                for _, d in content:GetDescendants() do
+                    if d:IsA("TextLabel") or d:IsA("TextButton") then
+                        d.TextTransparency = 1
+                        tw(d, {TextTransparency = 0}, 0.25)
+                    end
+                end
+                t.Completed:Connect(function()
+                    animating = false
+                    container.ClipsDescendants = false
+                    container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    -- Auto-scroll: bring this accordion's top into view
+                    task.wait()
+                    local viewTopY = scrollFrame.AbsolutePosition.Y
+                    local viewH = scrollFrame.AbsoluteSize.Y
+                    local containerTopY = container.AbsolutePosition.Y
+                    local containerH = container.AbsoluteSize.Y
+                    local relTop = containerTopY - viewTopY
+                    local maxCanvas = math.max(0, scrollFrame.AbsoluteCanvasSize.Y - viewH)
+                    local newY = scrollFrame.CanvasPosition.Y
+                    if relTop < 0 or containerH > viewH then
+                        newY = scrollFrame.CanvasPosition.Y + relTop - PAD
+                    elseif relTop + containerH > viewH then
+                        newY = scrollFrame.CanvasPosition.Y + (relTop + containerH - viewH) + PAD
+                    end
+                    newY = math.clamp(newY, 0, maxCanvas)
+                    if math.abs(newY - scrollFrame.CanvasPosition.Y) > 1 then
+                        tw(scrollFrame, {CanvasPosition = Vector2.new(0, newY)}, 0.18)
+                    end
+                end)
+            end
+
+            local function doCollapse()
+                if not isExpanded or animating then return end
+                isExpanded = false
+                animating = true
+                tw(arrow, {Rotation = 0}, 0.18)
+                tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
+                container.ClipsDescendants = true
+                local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
+                t.Completed:Connect(function() animating = false end)
+            end
+
+            -- Register this accordion so siblings can be closed on overflow
+            local entry = {
+                container = container,
+                isExpanded = function() return isExpanded end,
+                collapse = doCollapse,
+                expandedHeight = function()
+                    return ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y
+                end,
+            }
+            local registryList = accordionRegistry[scrollFrame]
+            if not registryList then
+                registryList = {}
+                accordionRegistry[scrollFrame] = registryList
+            end
+            table.insert(registryList, entry)
+
             headerBtn.MouseButton1Click:Connect(function()
                 if animating then return end
-                animating = true
-                isExpanded = not isExpanded
-                tw(arrow, {Rotation = isExpanded and 90 or 0}, 0.18)
-                tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.12)
-
                 if isExpanded then
-                    -- Calculate target height from content
-                    local contentH = contentInnerLayout.AbsoluteContentSize.Y
-                    local targetH = ACCORDION_H + GAP + contentH
-                    -- Slide open
-                    local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
-                    -- Fade in children
-                    for _, d in content:GetDescendants() do
-                        if d:IsA("TextLabel") or d:IsA("TextButton") then
-                            d.TextTransparency = 1
-                            tw(d, {TextTransparency = 0}, 0.25)
+                    doCollapse()
+                    return
+                end
+                -- About to expand: predict overflow and close other expanded accordions if needed
+                local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
+                local viewH = scrollFrame.AbsoluteSize.Y
+                if viewH <= 0 then viewH = MAX_PANEL_CONTENT end
+                local currentContentH = sfLayout and sfLayout.AbsoluteContentSize.Y or 0
+                local thisExpandedH = ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y
+                local predicted = currentContentH - ACCORDION_H + thisExpandedH
+                if predicted > viewH then
+                    -- Close OTHER expanded accordions until predicted fits (or none left)
+                    local list = accordionRegistry[scrollFrame] or {}
+                    for _, e in list do
+                        if predicted <= viewH then break end
+                        if e.container ~= container and e.isExpanded() then
+                            local saved = e.expandedHeight()
+                            e.collapse()
+                            predicted = predicted - (saved - ACCORDION_H)
                         end
                     end
-                    t.Completed:Connect(function()
-                        animating = false
-                        -- Unclip after expand so nested dropdowns can overflow/resize cleanly
-                        container.ClipsDescendants = false
-                        container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
-                    end)
-                else
-                    -- Re-enable clipping for collapse animation
-                    container.ClipsDescendants = true
-                    -- Slide closed
-                    local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
-                    t.Completed:Connect(function() animating = false end)
                 end
+                doExpand()
             end)
 
             -- Live-resize accordion when inner content (e.g. dropdown options) grows/shrinks
