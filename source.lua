@@ -1,4 +1,4 @@
---VER=11
+--VER=12
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -382,7 +382,10 @@ local function bindPanelResize(panel, titleBar, scrollFrame, layout)
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
     task.defer(resize)
     local function setSuppress(v) suppress = v end
-    return resize, setSuppress
+    -- markVisH: lets external tween code (e.g. accordion click handler) tell us
+    -- "panel is now at this visH" so the next resize() doesn't fire a redundant tween.
+    local function markVisH(v) lastVisH = v end
+    return resize, setSuppress, markVisH
 end
 
 --==========================================================
@@ -691,7 +694,7 @@ function XiroLib:CreateWindow(config)
         contentPadding.Parent = scrollFrame
 
         -- Auto-resize panel
-        local resizeFn, setResizeSuppress = bindPanelResize(panel, titleBar, scrollFrame, contentLayout)
+        local resizeFn, setResizeSuppress, markVisH = bindPanelResize(panel, titleBar, scrollFrame, contentLayout)
 
         -- Minimize toggle
         minBtn.MouseButton1Click:Connect(function()
@@ -884,6 +887,7 @@ function XiroLib:CreateWindow(config)
                 local newContentH = math.max(0, currentContentH + deltaH)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
+                markVisH(newVisH)
                 tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
                 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
