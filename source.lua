@@ -1,4 +1,4 @@
---VER=16
+--VER=17
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -367,12 +367,14 @@ end
 
 local function bindPanelResize(panel, titleBar, scrollFrame, layout)
     local suppress = false
+    -- scrollFrame uses relative sizing (1, 0, 1, -TITLE_H) so it always tracks panel.Size
+    -- in lock-step. We only ever tween/set panel.Size — no separate scrollFrame.Size tween.
+    scrollFrame.Size = UDim2.new(1, 0, 1, -TITLE_H)
     local function resize()
         if suppress then return end
-        local contentH = layout.AbsoluteContentSize.Y + PAD * 2
+        local contentH = math.floor(layout.AbsoluteContentSize.Y + PAD * 2 + 0.5)
         local visH = math.min(contentH, MAX_PANEL_CONTENT)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentH)
-        scrollFrame.Size = UDim2.new(1, 0, 0, visH)
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + visH)
     end
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
@@ -661,7 +663,7 @@ function XiroLib:CreateWindow(config)
         -- Scroll frame (content area)
         local scrollFrame = Instance.new("ScrollingFrame")
         scrollFrame.Name = "Content"
-        scrollFrame.Size = UDim2.new(1, 0, 0, 200)
+        scrollFrame.Size = UDim2.new(1, 0, 1, -TITLE_H)
         scrollFrame.Position = UDim2.new(0, 0, 0, TITLE_H)
         scrollFrame.BackgroundTransparency = 1
         scrollFrame.BorderSizePixel = 0
@@ -877,10 +879,10 @@ function XiroLib:CreateWindow(config)
                 if deltaH == 0 then return end
                 local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
                 local currentContentH = (sfLayout and sfLayout.AbsoluteContentSize.Y or 0) + PAD * 2
-                local newContentH = math.max(0, currentContentH + deltaH)
+                local newContentH = math.floor(math.max(0, currentContentH + deltaH) + 0.5)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
-                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
+                -- scrollFrame.Size is relative (1, 0, 1, -TITLE_H) — auto-tracks panel.Size
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
                 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
                 task.delay(dur + 0.02, function()
