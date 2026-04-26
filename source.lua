@@ -1,4 +1,4 @@
---VER=7
+--VER=8
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -670,7 +670,8 @@ function XiroLib:CreateWindow(config)
         scrollFrame.ScrollBarImageColor3 = C.ScrollBar
         scrollFrame.ScrollBarImageTransparency = 0.3
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-        scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        -- NOTE: do NOT enable AutomaticCanvasSize — bindPanelResize manages CanvasSize
+        -- manually. Having both fight causes per-frame jitter during accordion expand.
         scrollFrame.Parent = panel
 
         local contentLayout = Instance.new("UIListLayout")
@@ -816,6 +817,19 @@ function XiroLib:CreateWindow(config)
             headerBtn.Text = ""
             headerBtn.Parent = header
 
+            -- Tween panel.Size in lockstep with the accordion to prevent jitter.
+            -- Per-frame bindPanelResize is suppressed during the animation, then resync at end.
+            local function tweenPanelToContent(deltaH, dur)
+                setResizeSuppress(true)
+                local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
+                local currentContentH = (sfLayout and sfLayout.AbsoluteContentSize.Y or 0) + PAD * 2
+                local newContentH = currentContentH + deltaH
+                local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
+                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
+                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
+                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
+            end
+
             local function doExpand()
                 if isExpanded or animating then return end
                 isExpanded = true
@@ -824,6 +838,8 @@ function XiroLib:CreateWindow(config)
                 tw(header, {BackgroundColor3 = C.Elem}, 0.12)
                 local contentH = contentInnerLayout.AbsoluteContentSize.Y
                 local targetH = ACCORDION_H + GAP + contentH
+                local deltaH = targetH - ACCORDION_H
+                tweenPanelToContent(deltaH, 0.2)
                 local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
                 for _, d in content:GetDescendants() do
                     if d:IsA("TextLabel") or d:IsA("TextButton") then
@@ -835,6 +851,8 @@ function XiroLib:CreateWindow(config)
                     animating = false
                     container.ClipsDescendants = false
                     container.Size = UDim2.new(1, 0, 0, ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y)
+                    setResizeSuppress(false)
+                    resizeFn() -- resync panel/canvas to final content
                     -- Auto-scroll: bring this accordion's top into view
                     task.wait()
                     local viewTopY = scrollFrame.AbsolutePosition.Y
@@ -863,8 +881,15 @@ function XiroLib:CreateWindow(config)
                 tw(arrow, {Rotation = 0}, 0.18)
                 tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
                 container.ClipsDescendants = true
+                local currentContentH = contentInnerLayout.AbsoluteContentSize.Y
+                local deltaH = -(ACCORDION_H + GAP + currentContentH - ACCORDION_H)
+                tweenPanelToContent(deltaH, 0.2)
                 local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
-                t.Completed:Connect(function() animating = false end)
+                t.Completed:Connect(function()
+                    animating = false
+                    setResizeSuppress(false)
+                    resizeFn() -- resync after collapse
+                end)
             end
 
             -- Register this accordion so siblings can be closed on overflow
