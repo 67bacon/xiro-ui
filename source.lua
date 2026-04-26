@@ -1,4 +1,4 @@
---VER=8
+--VER=9
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -871,6 +871,8 @@ function XiroLib:CreateWindow(config)
 
             -- Single-shot panel tween for a click "transaction" (covers self ± closed siblings).
             -- Suppresses per-frame resize during the 0.2s animation, resyncs at end.
+            -- Tweens scrollFrame.Size, CanvasSize, and panel.Size together so scrollbar
+            -- presence stays consistent (no width-3px reflow flicker during tween).
             local function tweenPanelByDelta(deltaH, dur)
                 if deltaH == 0 then return end
                 local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
@@ -878,9 +880,8 @@ function XiroLib:CreateWindow(config)
                 local newContentH = math.max(0, currentContentH + deltaH)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
-                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
+                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH), CanvasSize = UDim2.new(0, 0, 0, newContentH)}, dur)
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
-                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
                 task.delay(dur + 0.02, function()
                     setResizeSuppress(false)
                     resizeFn() -- final resync
