@@ -1,4 +1,4 @@
---VER=9
+--VER=11
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -367,13 +367,17 @@ end
 
 local function bindPanelResize(panel, titleBar, scrollFrame, layout)
     local suppress = false
+    local lastVisH = nil
     local function resize()
         if suppress then return end
         local contentH = layout.AbsoluteContentSize.Y + PAD * 2
         local visH = math.min(contentH, MAX_PANEL_CONTENT)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentH)
-        scrollFrame.Size = UDim2.new(1, 0, 0, visH)
-        panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + visH)
+        if visH ~= lastVisH then
+            lastVisH = visH
+            tw(scrollFrame, {Size = UDim2.new(1, 0, 0, visH)}, 0.08)
+            tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + visH)}, 0.08)
+        end
     end
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
     task.defer(resize)
@@ -880,8 +884,9 @@ function XiroLib:CreateWindow(config)
                 local newContentH = math.max(0, currentContentH + deltaH)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
-                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH), CanvasSize = UDim2.new(0, 0, 0, newContentH)}, dur)
+                tw(scrollFrame, {Size = UDim2.new(1, 0, 0, newVisH)}, dur)
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
+                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, newContentH)
                 task.delay(dur + 0.02, function()
                     setResizeSuppress(false)
                     resizeFn() -- final resync
