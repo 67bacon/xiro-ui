@@ -1,4 +1,4 @@
---VER=15
+--VER=16
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -668,7 +668,7 @@ function XiroLib:CreateWindow(config)
         scrollFrame.ScrollBarThickness = 3
         scrollFrame.ScrollBarImageColor3 = C.ScrollBar
         scrollFrame.ScrollBarImageTransparency = 0.3
-        scrollFrame.VerticalScrollBarInset = Enum.ScrollingFrameInset.Always
+        scrollFrame.VerticalScrollBarInset = Enum.ScrollBarInset.Always
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         -- NOTE: do NOT enable AutomaticCanvasSize — bindPanelResize manages CanvasSize
         -- manually. Having both fight causes per-frame jitter during accordion expand.
