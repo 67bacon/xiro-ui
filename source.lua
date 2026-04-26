@@ -1,4 +1,4 @@
---VER=13
+--VER=14
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -225,8 +225,8 @@ local function makeDraggable(frame, handle, onDragEnd)
     moveFn = function(input)
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            startPos.X.Scale, math.floor(startPos.X.Offset + delta.X + 0.5),
+            startPos.Y.Scale, math.floor(startPos.Y.Offset + delta.Y + 0.5)
         )
     end
 
