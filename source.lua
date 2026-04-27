@@ -1,4 +1,4 @@
---VER=23
+--VER=24
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -778,6 +778,28 @@ function XiroLib:CreateWindow(config)
             -- Animate ONLY the accordion's own container.Size.
             -- The click handler orchestrates panel/scrollFrame/canvas tweens at the
             -- transaction level so sibling-close + self-expand share ONE coherent panel tween.
+            -- Integer-snap manual size animation — TweenService produces fractional Y
+            -- values during interpolation, which on CanvasGroup parents causes per-frame
+            -- sub-pixel rounding flips ("jelly shake"). math.floor every frame fixes it.
+            local sizeAnimConn
+            local function animateContainerHeight(targetH, dur, onDone)
+                if sizeAnimConn then sizeAnimConn:Disconnect(); sizeAnimConn = nil end
+                local startH = container.Size.Y.Offset
+                local endH = math.floor(targetH + 0.5)
+                local t0 = tick()
+                sizeAnimConn = RunService.Heartbeat:Connect(function()
+                    local p = math.min(1, (tick() - t0) / dur)
+                    local e = 1 - (1 - p) * (1 - p) * (1 - p) -- ease-out cubic
+                    local h = math.floor(startH + (endH - startH) * e + 0.5)
+                    container.Size = UDim2.new(1, 0, 0, h)
+                    if p >= 1 then
+                        sizeAnimConn:Disconnect()
+                        sizeAnimConn = nil
+                        if onDone then onDone() end
+                    end
+                end)
+            end
+
             local function doExpand()
                 if isExpanded or animating then return end
                 isExpanded = true
@@ -786,19 +808,15 @@ function XiroLib:CreateWindow(config)
                 tw(header, {BackgroundColor3 = C.Elem}, 0.12)
                 local contentH = contentInnerLayout.AbsoluteContentSize.Y
                 local targetH = math.floor(ACCORDION_H + GAP + contentH + 0.5)
-                local t = tw(container, {Size = UDim2.new(1, 0, 0, targetH)}, 0.2)
                 for _, d in content:GetDescendants() do
                     if d:IsA("TextLabel") or d:IsA("TextButton") then
                         d.TextTransparency = 1
                         tw(d, {TextTransparency = 0}, 0.25)
                     end
                 end
-                t.Completed:Connect(function()
+                animateContainerHeight(targetH, 0.2, function()
                     animating = false
                     container.ClipsDescendants = false
-                    task.defer(function()
-                        container.Size = UDim2.new(1, 0, 0, math.floor(ACCORDION_H + GAP + contentInnerLayout.AbsoluteContentSize.Y + 0.5))
-                    end)
                 end)
             end
 
@@ -809,8 +827,9 @@ function XiroLib:CreateWindow(config)
                 tw(arrow, {Rotation = 0}, 0.18)
                 tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
                 container.ClipsDescendants = true
-                local t = tw(container, {Size = UDim2.new(1, 0, 0, ACCORDION_H)}, 0.2)
-                t.Completed:Connect(function() animating = false end)
+                animateContainerHeight(ACCORDION_H, 0.2, function()
+                    animating = false
+                end)
             end
 
             -- Register this accordion so siblings can be closed on overflow
@@ -833,6 +852,7 @@ function XiroLib:CreateWindow(config)
             -- Suppresses per-frame resize during the 0.2s animation, resyncs at end.
             -- Tweens scrollFrame.Size, CanvasSize, and panel.Size together so scrollbar
             -- presence stays consistent (no width-3px reflow flicker during tween).
+            local panelAnimConn
             local function tweenPanelByDelta(deltaH, dur)
                 if deltaH == 0 then return end
                 local sfLayout = scrollFrame:FindFirstChildOfClass("UIListLayout")
@@ -840,8 +860,21 @@ function XiroLib:CreateWindow(config)
                 local newContentH = math.floor(math.max(0, currentContentH + deltaH) + 0.5)
                 local newVisH = math.min(newContentH, MAX_PANEL_CONTENT)
                 setResizeSuppress(true)
-                -- scrollFrame.Size relative; CanvasSize handled by AutomaticCanvasSize.
-                tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H + newVisH)}, dur)
+                -- Manual integer-snap animation (avoids TweenService fractional Y).
+                if panelAnimConn then panelAnimConn:Disconnect(); panelAnimConn = nil end
+                local startH = panel.Size.Y.Offset
+                local endH = TITLE_H + newVisH
+                local t0 = tick()
+                panelAnimConn = RunService.Heartbeat:Connect(function()
+                    local p = math.min(1, (tick() - t0) / dur)
+                    local e = 1 - (1 - p) * (1 - p) * (1 - p)
+                    local h = math.floor(startH + (endH - startH) * e + 0.5)
+                    panel.Size = UDim2.new(0, PANEL_W, 0, h)
+                    if p >= 1 then
+                        panelAnimConn:Disconnect()
+                        panelAnimConn = nil
+                    end
+                end)
                 task.delay(dur + 0.12, function()
                     setResizeSuppress(false)
                     resizeFn()
