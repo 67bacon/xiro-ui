@@ -1,4 +1,4 @@
---VER=24
+--VER=25
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -51,7 +51,7 @@ local function applyTheme(name)
 end
 
 ---------- LAYOUT CONSTANTS ----------
-local PANEL_W      = 260
+local PANEL_W      = 300
 local TITLE_H      = 32
 local ELEM_H       = 32
 local SLIDER_H     = 46
