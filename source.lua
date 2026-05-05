@@ -1,4 +1,4 @@
---VER=34
+--VER=35
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -815,18 +815,10 @@ function XiroLib:CreateWindow(config)
                 if sizeAnimConn then sizeAnimConn:Disconnect(); sizeAnimConn = nil end
                 local startH = container.Size.Y.Offset
                 local endH = math.floor(targetH + 0.5)
-                local shrinking = endH < startH
                 local t0 = tick()
                 sizeAnimConn = RunService.Heartbeat:Connect(function()
                     local p = math.min(1, (tick() - t0) / dur)
-                    local e
-                    if shrinking then
-                        -- sine ease-in-out for collapse: gentle start, gentle finish, smooth middle
-                        e = 0.5 - 0.5 * math.cos(p * math.pi)
-                    else
-                        -- ease-out cubic for expand: snappy open
-                        e = 1 - (1 - p) * (1 - p) * (1 - p)
-                    end
+                    local e = 1 - (1 - p) * (1 - p) * (1 - p) -- ease-out cubic
                     local h = math.floor(startH + (endH - startH) * e + 0.5)
                     container.Size = UDim2.new(1, 0, 0, h)
                     if p >= 1 then
@@ -863,15 +855,8 @@ function XiroLib:CreateWindow(config)
                 animating = true
                 tw(arrow, {Rotation = 0}, 0.18)
                 tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
-                -- Fade content text out concurrently (mirrors doExpand fade-in).
-                -- Without this, content jumps invisible when ClipsDescendants flips → "slam".
-                for _, d in content:GetDescendants() do
-                    if d:IsA("TextLabel") or d:IsA("TextButton") then
-                        tw(d, {TextTransparency = 1}, 0.18)
-                    end
-                end
                 container.ClipsDescendants = true
-                animateContainerHeight(ACCORDION_H, 0.28, function()
+                animateContainerHeight(ACCORDION_H, 0.2, function()
                     animating = false
                 end)
             end
