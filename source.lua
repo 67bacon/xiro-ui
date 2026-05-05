@@ -1,4 +1,4 @@
---VER=29
+--VER=30
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -648,7 +648,7 @@ function XiroLib:CreateWindow(config)
 
         local contentLayout = Instance.new("UIListLayout")
         contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        contentLayout.Padding = UDim.new(0, GAP)
+        contentLayout.Padding = UDim.new(0, GAP + 4)  -- bigger gap between accordions (10px)
         contentLayout.Parent = scrollFrame
 
         local contentPadding = Instance.new("UIPadding")
@@ -1009,7 +1009,7 @@ function XiroLib:CreateWindow(config)
 
                 local indicator = Instance.new("Frame")
                 indicator.Size = UDim2.new(0, 36, 0, 18)
-                indicator.Position = UDim2.new(1, -44, 0.5, -9)
+                indicator.Position = UDim2.new(1, -38, 0.5, -9)
                 indicator.BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff
                 indicator.BorderSizePixel = 0
                 indicator.Parent = frame
