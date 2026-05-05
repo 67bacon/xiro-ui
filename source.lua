@@ -1,4 +1,4 @@
---VER=33
+--VER=34
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -821,8 +821,8 @@ function XiroLib:CreateWindow(config)
                     local p = math.min(1, (tick() - t0) / dur)
                     local e
                     if shrinking then
-                        -- ease-in-out cubic for collapse: gentle start AND finish, no slam
-                        e = p < 0.5 and 4 * p * p * p or 1 - ((-2 * p + 2) ^ 3) / 2
+                        -- sine ease-in-out for collapse: gentle start, gentle finish, smooth middle
+                        e = 0.5 - 0.5 * math.cos(p * math.pi)
                     else
                         -- ease-out cubic for expand: snappy open
                         e = 1 - (1 - p) * (1 - p) * (1 - p)
@@ -863,8 +863,15 @@ function XiroLib:CreateWindow(config)
                 animating = true
                 tw(arrow, {Rotation = 0}, 0.18)
                 tw(header, {BackgroundColor3 = C.TitleBar}, 0.12)
+                -- Fade content text out concurrently (mirrors doExpand fade-in).
+                -- Without this, content jumps invisible when ClipsDescendants flips → "slam".
+                for _, d in content:GetDescendants() do
+                    if d:IsA("TextLabel") or d:IsA("TextButton") then
+                        tw(d, {TextTransparency = 1}, 0.18)
+                    end
+                end
                 container.ClipsDescendants = true
-                animateContainerHeight(ACCORDION_H, 0.2, function()
+                animateContainerHeight(ACCORDION_H, 0.28, function()
                     animating = false
                 end)
             end
