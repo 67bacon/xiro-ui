@@ -1,4 +1,4 @@
---VER=25
+--VER=26
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -53,13 +53,13 @@ end
 ---------- LAYOUT CONSTANTS ----------
 local PANEL_W      = 300
 local TITLE_H      = 32
-local ELEM_H       = 32
+local ELEM_H       = 34
 local SLIDER_H     = 46
 local DROPDOWN_H   = 46
 local SECTION_H    = 24
 local ACCORDION_H  = 28
 local PAD           = 8
-local GAP           = 4
+local GAP           = 6
 local CORNER_R      = 6
 local CORNER_SM     = 4
 local MAX_PANEL_CONTENT = 720
@@ -729,7 +729,21 @@ function XiroLib:CreateWindow(config)
             header.LayoutOrder = 0
             header.Parent = container
             addCorner(header, CORNER_SM)
-            addStroke(header, 1, C.Border)
+            -- Softer border: 50% transparent for depth without hard line
+            local headerStroke = Instance.new("UIStroke")
+            headerStroke.Thickness = 1
+            headerStroke.Color = C.Border
+            headerStroke.Transparency = 0.5
+            headerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            headerStroke.Parent = header
+            -- Subtle vertical gradient (top brighter, bottom darker) for depth
+            local headerGradient = Instance.new("UIGradient")
+            headerGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.new(0.78, 0.78, 0.78)),
+            })
+            headerGradient.Rotation = 90
+            headerGradient.Parent = header
 
             local arrow = Instance.new("TextLabel")
             arrow.Size = UDim2.new(0, 20, 1, 0)
