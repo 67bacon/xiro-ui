@@ -1,4 +1,4 @@
---VER=32
+--VER=33
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -815,10 +815,18 @@ function XiroLib:CreateWindow(config)
                 if sizeAnimConn then sizeAnimConn:Disconnect(); sizeAnimConn = nil end
                 local startH = container.Size.Y.Offset
                 local endH = math.floor(targetH + 0.5)
+                local shrinking = endH < startH
                 local t0 = tick()
                 sizeAnimConn = RunService.Heartbeat:Connect(function()
                     local p = math.min(1, (tick() - t0) / dur)
-                    local e = 1 - (1 - p) * (1 - p) * (1 - p) -- ease-out cubic
+                    local e
+                    if shrinking then
+                        -- ease-in-out cubic for collapse: gentle start AND finish, no slam
+                        e = p < 0.5 and 4 * p * p * p or 1 - ((-2 * p + 2) ^ 3) / 2
+                    else
+                        -- ease-out cubic for expand: snappy open
+                        e = 1 - (1 - p) * (1 - p) * (1 - p)
+                    end
                     local h = math.floor(startH + (endH - startH) * e + 0.5)
                     container.Size = UDim2.new(1, 0, 0, h)
                     if p >= 1 then
