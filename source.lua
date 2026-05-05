@@ -1,4 +1,4 @@
---VER=36
+--VER=37
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -1405,27 +1405,34 @@ function XiroLib:CreateWindow(config)
                 local EXPAND_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
                 local COLLAPSE_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 
+                local ddAnimating = false
+
                 local function closeThis()
                     isOpen = false
+                    ddAnimating = true
                     tw(ddArrow, {Rotation = 0}, 0.16)
                     TS:Create(optWrap, COLLAPSE_INFO, {Size = UDim2.new(1, 0, 0, 0)}):Play()
                     task.delay(0.22, function()
                         if not isOpen then optWrap.Visible = false end
+                        ddAnimating = false
                     end)
                 end
 
                 mainBtn.MouseButton1Click:Connect(function()
+                    if ddAnimating then return end
                     if isOpen then
                         closeThis()
                         openDropdown = nil
                     else
                         closeOpenDropdown()
                         isOpen = true
+                        ddAnimating = true
                         optWrap.Size = UDim2.new(1, 0, 0, 0)
                         optWrap.Visible = true
                         refreshContainerH()
                         tw(ddArrow, {Rotation = 180}, 0.22)
                         TS:Create(optWrap, EXPAND_INFO, {Size = UDim2.new(1, 0, 0, getFullH())}):Play()
+                        task.delay(0.22, function() ddAnimating = false end)
                         openDropdown = closeThis
                     end
                 end)
