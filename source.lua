@@ -1,4 +1,4 @@
---VER=27
+--VER=28
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -593,6 +593,15 @@ function XiroLib:CreateWindow(config)
         titleBar.BorderSizePixel = 0
         titleBar.Parent = panel
         addCorner(titleBar, CORNER_R)
+        -- C: 2px accent strip on top edge for "tab"-style visual identity
+        local titleAccent = Instance.new("Frame")
+        titleAccent.Size = UDim2.new(1, 0, 0, 2)
+        titleAccent.Position = UDim2.new(0, 0, 0, 0)
+        titleAccent.BackgroundColor3 = C.Accent
+        titleAccent.BorderSizePixel = 0
+        titleAccent.ZIndex = 2
+        titleAccent.Parent = titleBar
+        addCorner(titleAccent, CORNER_R)
 
         -- Fix bottom corners of title bar (fill gap)
         local titleFill = Instance.new("Frame")
@@ -763,7 +772,7 @@ function XiroLib:CreateWindow(config)
             headerLabel.Text = accordionName or "Section"
             headerLabel.TextColor3 = C.Accent
             headerLabel.Font = FONT_SEMI
-            headerLabel.TextSize = FSIZE
+            headerLabel.TextSize = FSIZE + 1
             headerLabel.TextXAlignment = Enum.TextXAlignment.Left
             headerLabel.Parent = header
 
@@ -1145,6 +1154,12 @@ function XiroLib:CreateWindow(config)
                 barFill.BorderSizePixel = 0
                 barFill.Parent = barBG
                 addCorner(barFill, 3)
+                local fillGradient = Instance.new("UIGradient")
+                fillGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(0.7, 0.7, 0.7)),
+                    ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+                })
+                fillGradient.Parent = barFill
 
                 local dragArea = Instance.new("TextButton")
                 dragArea.Size = UDim2.new(1, 0, 1, 0)
@@ -1347,6 +1362,15 @@ function XiroLib:CreateWindow(config)
                         optBtn.LayoutOrder = i
                         optBtn.Parent = optContainer
                         addCorner(optBtn, CORNER_SM)
+                        if isSelected then
+                            local sel = Instance.new("Frame")
+                            sel.Size = UDim2.new(0, 3, 0.7, 0)
+                            sel.Position = UDim2.new(0, 0, 0.15, 0)
+                            sel.BackgroundColor3 = C.Accent
+                            sel.BorderSizePixel = 0
+                            sel.Parent = optBtn
+                            addCorner(sel, 1)
+                        end
 
                         optBtn.MouseEnter:Connect(function()
                             if not table.find(current, opt) then tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.08) end
