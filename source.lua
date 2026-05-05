@@ -1,4 +1,4 @@
---VER=30
+--VER=31
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -652,8 +652,8 @@ function XiroLib:CreateWindow(config)
         contentLayout.Parent = scrollFrame
 
         local contentPadding = Instance.new("UIPadding")
-        contentPadding.PaddingLeft = UDim.new(0, PAD)
-        contentPadding.PaddingRight = UDim.new(0, PAD)
+        contentPadding.PaddingLeft = UDim.new(0, 4)
+        contentPadding.PaddingRight = UDim.new(0, 4)
         contentPadding.PaddingTop = UDim.new(0, PAD)
         contentPadding.PaddingBottom = UDim.new(0, PAD)
         contentPadding.Parent = scrollFrame
@@ -784,10 +784,10 @@ function XiroLib:CreateWindow(config)
             content.Parent = container
             addCorner(content, CORNER_SM)
 
-            -- Symmetric padding: equal left/right + matching top/bottom
+            -- Tight padding: minimize wasted edge gaps
             local contentPadding = Instance.new("UIPadding")
-            contentPadding.PaddingLeft = UDim.new(0, 6)
-            contentPadding.PaddingRight = UDim.new(0, 6)
+            contentPadding.PaddingLeft = UDim.new(0, 3)
+            contentPadding.PaddingRight = UDim.new(0, 3)
             contentPadding.PaddingTop = UDim.new(0, 4)
             contentPadding.PaddingBottom = UDim.new(0, 4)
             contentPadding.Parent = content
