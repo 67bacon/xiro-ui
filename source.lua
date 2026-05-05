@@ -1,4 +1,4 @@
---VER=35
+--VER=36
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -1403,13 +1403,13 @@ function XiroLib:CreateWindow(config)
                 mainBtn.Parent = mainRow
 
                 local EXPAND_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-                local COLLAPSE_INFO = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+                local COLLAPSE_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 
                 local function closeThis()
                     isOpen = false
                     tw(ddArrow, {Rotation = 0}, 0.16)
                     TS:Create(optWrap, COLLAPSE_INFO, {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                    task.delay(0.16, function()
+                    task.delay(0.22, function()
                         if not isOpen then optWrap.Visible = false end
                     end)
                 end
@@ -2227,7 +2227,7 @@ function XiroLib:CreateWindow(config)
             mainBtn.Parent = mainRow
 
             local EXPAND_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-            local COLLAPSE_INFO = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            local COLLAPSE_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 
             local function closeThis()
                 isOpen = false
