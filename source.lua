@@ -1,4 +1,4 @@
---VER=26
+--VER=27
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -772,10 +772,26 @@ function XiroLib:CreateWindow(config)
             content.Name = "Content"
             content.AutomaticSize = Enum.AutomaticSize.Y
             content.Size = UDim2.new(1, 0, 0, 0)
-            content.BackgroundTransparency = 1
+            -- B: subtle BG tint to visually nest contents inside accordion
+            content.BackgroundColor3 = Color3.fromRGB(
+                math.max(0, C.Panel.R * 255 - 4),
+                math.max(0, C.Panel.G * 255 - 4),
+                math.max(0, C.Panel.B * 255 - 4)
+            )
+            content.BackgroundTransparency = 0.4
             content.Visible = true
             content.LayoutOrder = 1
             content.Parent = container
+            addCorner(content, CORNER_SM)
+
+            -- A: left indent for child elements (visual hierarchy)
+            -- C: top padding so first toggle isn't glued to header
+            local contentPadding = Instance.new("UIPadding")
+            contentPadding.PaddingLeft = UDim.new(0, 6)
+            contentPadding.PaddingRight = UDim.new(0, 2)
+            contentPadding.PaddingTop = UDim.new(0, 4)
+            contentPadding.PaddingBottom = UDim.new(0, 2)
+            contentPadding.Parent = content
 
             local contentInnerLayout = Instance.new("UIListLayout")
             contentInnerLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -999,7 +1015,12 @@ function XiroLib:CreateWindow(config)
                 indicator.BorderSizePixel = 0
                 indicator.Parent = frame
                 addCorner(indicator, 9)
-                addStroke(indicator, 1, C.Border)
+                -- D: glow stroke that brightens with accent when toggle enabled
+                local indicatorStroke = Instance.new("UIStroke")
+                indicatorStroke.Thickness = 1
+                indicatorStroke.Color = enabled and C.ToggleOn or C.Border
+                indicatorStroke.Transparency = enabled and 0.2 or 0
+                indicatorStroke.Parent = indicator
 
                 local dot = Instance.new("Frame")
                 dot.Size = UDim2.new(0, 14, 0, 14)
@@ -1012,6 +1033,11 @@ function XiroLib:CreateWindow(config)
                 local function updateVisual()
                     tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
                     tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
+                    -- D: tween stroke for soft glow effect
+                    pcall(function()
+                        indicatorStroke.Color = enabled and C.ToggleOn or C.Border
+                        tw(indicatorStroke, {Transparency = enabled and 0.2 or 0}, 0.15)
+                    end)
                     if enabled then
                         startPulse()
                     else
