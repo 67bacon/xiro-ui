@@ -1,4 +1,4 @@
---VER=28
+--VER=29
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -593,15 +593,6 @@ function XiroLib:CreateWindow(config)
         titleBar.BorderSizePixel = 0
         titleBar.Parent = panel
         addCorner(titleBar, CORNER_R)
-        -- C: 2px accent strip on top edge for "tab"-style visual identity
-        local titleAccent = Instance.new("Frame")
-        titleAccent.Size = UDim2.new(1, 0, 0, 2)
-        titleAccent.Position = UDim2.new(0, 0, 0, 0)
-        titleAccent.BackgroundColor3 = C.Accent
-        titleAccent.BorderSizePixel = 0
-        titleAccent.ZIndex = 2
-        titleAccent.Parent = titleBar
-        addCorner(titleAccent, CORNER_R)
 
         -- Fix bottom corners of title bar (fill gap)
         local titleFill = Instance.new("Frame")
@@ -793,13 +784,12 @@ function XiroLib:CreateWindow(config)
             content.Parent = container
             addCorner(content, CORNER_SM)
 
-            -- A: left indent for child elements (visual hierarchy)
-            -- C: top padding so first toggle isn't glued to header
+            -- Symmetric padding: equal left/right + matching top/bottom
             local contentPadding = Instance.new("UIPadding")
             contentPadding.PaddingLeft = UDim.new(0, 6)
-            contentPadding.PaddingRight = UDim.new(0, 2)
+            contentPadding.PaddingRight = UDim.new(0, 6)
             contentPadding.PaddingTop = UDim.new(0, 4)
-            contentPadding.PaddingBottom = UDim.new(0, 2)
+            contentPadding.PaddingBottom = UDim.new(0, 4)
             contentPadding.Parent = content
 
             local contentInnerLayout = Instance.new("UIListLayout")
