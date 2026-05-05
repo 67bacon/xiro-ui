@@ -1,4 +1,4 @@
---VER=31
+--VER=32
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -1342,7 +1342,7 @@ function XiroLib:CreateWindow(config)
                         local isSelected = table.find(current, opt) ~= nil
                         local optBtn = Instance.new("TextButton")
                         optBtn.Size = UDim2.new(1, 0, 0, 24)
-                        optBtn.BackgroundColor3 = isSelected and C.AccentDark or C.Elem
+                        optBtn.BackgroundColor3 = isSelected and C.Elem:Lerp(C.Accent, 0.15) or C.Elem
                         optBtn.BorderSizePixel = 0
                         optBtn.Text = "  " .. opt
                         optBtn.TextColor3 = isSelected and C.Text or C.SubText
@@ -1366,7 +1366,7 @@ function XiroLib:CreateWindow(config)
                             if not table.find(current, opt) then tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.08) end
                         end)
                         optBtn.MouseLeave:Connect(function()
-                            tw(optBtn, {BackgroundColor3 = (table.find(current, opt) ~= nil) and C.AccentDark or C.Elem}, 0.08)
+                            tw(optBtn, {BackgroundColor3 = (table.find(current, opt) ~= nil) and C.Elem:Lerp(C.Accent, 0.15) or C.Elem}, 0.08)
                         end)
                         optBtn.MouseButton1Click:Connect(function()
                             if multi then
