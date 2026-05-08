@@ -1,4 +1,4 @@
---VER=41
+--VER=42
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -208,10 +208,10 @@ local function makeDraggable(frame, handle, onDragEnd)
             frame.ZIndex = zCounter
             moveHandlers[moveFn] = true
 
-            -- Visual feedback: accent stroke + uniform descendant fade.
-            -- CanvasGroup-style GroupTransparency caused sub-pixel shake during size
-            -- animations, so we replicate the look by tweening each descendant's
-            -- relevant transparency property together (+0.12 then restore).
+            -- Visual feedback: accent stroke + single overlay fade.
+            -- CanvasGroup's GroupTransparency causes sub-pixel shake during size
+            -- animations. Use a top-most overlay layer (added in CreateTab) and
+            -- tween its transparency — single composite layer ≈ CanvasGroup look.
             local stroke = frame:FindFirstChildOfClass("UIStroke")
             local origStrokeColor, origStrokeThick
             if stroke then
@@ -219,31 +219,9 @@ local function makeDraggable(frame, handle, onDragEnd)
                 origStrokeThick = stroke.Thickness
                 tw(stroke, {Color = C.Accent, Thickness = 2}, 0.12)
             end
-
-            local FADE_AMOUNT = 0.18
-            local fadeTargets = {}
-            local function pushTarget(inst, prop)
-                local ok, val = pcall(function() return inst[prop] end)
-                if ok and val and val < 1 then
-                    table.insert(fadeTargets, {inst = inst, prop = prop, orig = val})
-                end
-            end
-            pushTarget(frame, "BackgroundTransparency")
-            for _, d in ipairs(frame:GetDescendants()) do
-                if d:IsA("Frame") or d:IsA("ScrollingFrame") then
-                    pushTarget(d, "BackgroundTransparency")
-                elseif d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-                    pushTarget(d, "BackgroundTransparency")
-                    pushTarget(d, "TextTransparency")
-                elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then
-                    pushTarget(d, "BackgroundTransparency")
-                    pushTarget(d, "ImageTransparency")
-                elseif d:IsA("UIStroke") and d ~= stroke then
-                    pushTarget(d, "Transparency")
-                end
-            end
-            for _, t in ipairs(fadeTargets) do
-                tw(t.inst, {[t.prop] = math.min(1, t.orig + FADE_AMOUNT)}, 0.12)
+            local overlay = frame:FindFirstChild("DragFadeOverlay")
+            if overlay then
+                tw(overlay, {BackgroundTransparency = 0.55}, 0.12)
             end
 
             input.Changed:Connect(function()
@@ -252,8 +230,8 @@ local function makeDraggable(frame, handle, onDragEnd)
                     if stroke then
                         tw(stroke, {Color = origStrokeColor, Thickness = origStrokeThick}, 0.18)
                     end
-                    for _, t in ipairs(fadeTargets) do
-                        tw(t.inst, {[t.prop] = t.orig}, 0.18)
+                    if overlay then
+                        tw(overlay, {BackgroundTransparency = 1}, 0.18)
                     end
                     if onDragEnd then
                         pcall(onDragEnd, frame.Position.X.Offset, frame.Position.Y.Offset)
@@ -610,6 +588,19 @@ function XiroLib:CreateWindow(config)
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
+
+        -- Drag fade overlay: single composited layer to mimic CanvasGroup uniform
+        -- fade without the sub-pixel shake. Tweened by makeDraggable.
+        local fadeOverlay = Instance.new("Frame")
+        fadeOverlay.Name = "DragFadeOverlay"
+        fadeOverlay.Size = UDim2.new(1, 0, 1, 0)
+        fadeOverlay.BackgroundColor3 = C.Panel
+        fadeOverlay.BackgroundTransparency = 1
+        fadeOverlay.BorderSizePixel = 0
+        fadeOverlay.ZIndex = 1000
+        fadeOverlay.Active = false
+        fadeOverlay.Parent = panel
+        addCorner(fadeOverlay, CORNER_R)
 
         -- Title bar
         local titleBar = Instance.new("Frame")
