@@ -1,4 +1,4 @@
---VER=43
+--VER=44
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -441,9 +441,24 @@ function XiroLib:CreateWindow(config)
 
     -- Panel is a Frame (not CanvasGroup), so GroupTransparency is unavailable.
     -- Iterate descendants and tween each transparency property defensively.
+    -- Bases are CACHED per-panel (weak keys) so that values captured during the
+    -- first call (panel visible) survive subsequent fadeOut→fadeIn cycles. New
+    -- descendants added later get their current values as base.
+    local fadeTargetsByPanel = setmetatable({}, {__mode = "k"})
     local function collectFadeTargets(p)
-        local out = {}
+        local out = fadeTargetsByPanel[p]
+        local known = {}
+        if out then
+            for _, t in ipairs(out) do
+                known[t.inst] = known[t.inst] or {}
+                known[t.inst][t.prop] = true
+            end
+        else
+            out = {}
+            fadeTargetsByPanel[p] = out
+        end
         local function push(inst, prop)
+            if known[inst] and known[inst][prop] then return end
             local ok, val = pcall(function() return inst[prop] end)
             if ok and type(val) == "number" then
                 table.insert(out, {inst = inst, prop = prop, base = val})
