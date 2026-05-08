@@ -1,4 +1,4 @@
---VER=39
+--VER=40
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -208,7 +208,9 @@ local function makeDraggable(frame, handle, onDragEnd)
             frame.ZIndex = zCounter
             moveHandlers[moveFn] = true
 
-            -- Visual feedback: fade + accent stroke
+            -- Visual feedback: accent stroke + subtle bg tint toward Accent.
+            -- Panel is a Frame (not CanvasGroup) so GroupTransparency isn't available;
+            -- bg-color lerp gives a similar "grabbed/lifted" feel without sub-pixel shake.
             local stroke = frame:FindFirstChildOfClass("UIStroke")
             local origStrokeColor, origStrokeThick
             if stroke then
@@ -216,8 +218,13 @@ local function makeDraggable(frame, handle, onDragEnd)
                 origStrokeThick = stroke.Thickness
                 tw(stroke, {Color = C.Accent, Thickness = 2}, 0.12)
             end
-            if frame:IsA("CanvasGroup") then
-                tw(frame, {GroupTransparency = 0.12}, 0.12)
+            local origPanelBg = frame.BackgroundColor3
+            tw(frame, {BackgroundColor3 = origPanelBg:Lerp(C.Accent, 0.08)}, 0.12)
+            local titleBar = frame:FindFirstChild("TitleBar")
+            local origTitleBg
+            if titleBar then
+                origTitleBg = titleBar.BackgroundColor3
+                tw(titleBar, {BackgroundColor3 = origTitleBg:Lerp(C.Accent, 0.12)}, 0.12)
             end
 
             input.Changed:Connect(function()
@@ -226,8 +233,9 @@ local function makeDraggable(frame, handle, onDragEnd)
                     if stroke then
                         tw(stroke, {Color = origStrokeColor, Thickness = origStrokeThick}, 0.18)
                     end
-                    if frame:IsA("CanvasGroup") then
-                        tw(frame, {GroupTransparency = 0}, 0.18)
+                    tw(frame, {BackgroundColor3 = origPanelBg}, 0.18)
+                    if titleBar and origTitleBg then
+                        tw(titleBar, {BackgroundColor3 = origTitleBg}, 0.18)
                     end
                     if onDragEnd then
                         pcall(onDragEnd, frame.Position.X.Offset, frame.Position.Y.Offset)
