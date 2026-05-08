@@ -1,4 +1,4 @@
---VER=42
+--VER=43
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -439,17 +439,58 @@ function XiroLib:CreateWindow(config)
     local EASE_IN_QUART  = TweenInfo.new(FADE_OUT_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
     local EASE_BACK_OUT  = TweenInfo.new(FADE_IN_SCALE, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
+    -- Panel is a Frame (not CanvasGroup), so GroupTransparency is unavailable.
+    -- Iterate descendants and tween each transparency property defensively.
+    local function collectFadeTargets(p)
+        local out = {}
+        local function push(inst, prop)
+            local ok, val = pcall(function() return inst[prop] end)
+            if ok and type(val) == "number" then
+                table.insert(out, {inst = inst, prop = prop, base = val})
+            end
+        end
+        push(p, "BackgroundTransparency")
+        for _, d in ipairs(p:GetDescendants()) do
+            if d:IsA("Frame") or d:IsA("ScrollingFrame") then
+                push(d, "BackgroundTransparency")
+            elseif d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+                push(d, "BackgroundTransparency")
+                push(d, "TextTransparency")
+            elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then
+                push(d, "BackgroundTransparency")
+                push(d, "ImageTransparency")
+            elseif d:IsA("UIStroke") then
+                push(d, "Transparency")
+            end
+        end
+        return out
+    end
+
+    local function setFade(targets, alpha) -- alpha 0..1, 0=visible, 1=hidden
+        for _, t in ipairs(targets) do
+            pcall(function() t.inst[t.prop] = math.min(1, t.base + (1 - t.base) * alpha) end)
+        end
+    end
+
+    local function tweenFade(targets, info, alpha)
+        for _, t in ipairs(targets) do
+            local goal = math.min(1, t.base + (1 - t.base) * alpha)
+            pcall(function() TS:Create(t.inst, info, {[t.prop] = goal}):Play() end)
+        end
+    end
+
     local function fadeOutPanel(p, delay)
         local scale = ensurePanelScale(p)
         local stroke = p:FindFirstChildOfClass("UIStroke")
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
+        local targets = collectFadeTargets(p)
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_IN_QUART, {GroupTransparency = 1}):Play()
-            TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
+            tweenFade(targets, EASE_IN_QUART, 1)
+            pcall(function() TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play() end)
             if stroke then
-                TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play()
+                pcall(function() TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play() end)
             end
         end)
     end
@@ -458,16 +499,17 @@ function XiroLib:CreateWindow(config)
         local scale = ensurePanelScale(p)
         local stroke = p:FindFirstChildOfClass("UIStroke")
         scale.Scale = POP_START
-        p.GroupTransparency = 1
+        local targets = collectFadeTargets(p)
+        setFade(targets, 1) -- start fully hidden
         if stroke then stroke.Transparency = 1 end
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_OUT_QUART, {GroupTransparency = 0}):Play()
-            TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play()
+            tweenFade(targets, EASE_OUT_QUART, 0)
+            pcall(function() TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play() end)
             if stroke then
-                TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play()
+                pcall(function() TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play() end)
             end
         end)
     end
