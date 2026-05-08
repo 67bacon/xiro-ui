@@ -1,4 +1,4 @@
---VER=45
+--VER=48
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -86,8 +86,8 @@ local uiVisible       = true
 local toggleKeybind   = Enum.KeyCode.RightShift
 local openDropdown    = nil -- currently open dropdown closer
 local savedMouseBehavior = nil
-local FADE_STAGGER    = 0.05 -- stagger delay between panel fade-ins
-local FADE_STAGGER_OUT = 0.025 -- stagger delay for fade-out (稍快，收得干脆)
+local FADE_STAGGER    = 0.08 -- stagger delay between panel fade-ins
+local FADE_STAGGER_OUT = 0.04 -- stagger delay for fade-out (稍快，收得干脆)
 
 -- panel state persistence removed (didn't survive Roblox rejoins, pure overhead)
 -- defensive: clean up the legacy file if it still exists
@@ -208,10 +208,7 @@ local function makeDraggable(frame, handle, onDragEnd)
             frame.ZIndex = zCounter
             moveHandlers[moveFn] = true
 
-            -- Visual feedback: accent stroke + single overlay fade.
-            -- CanvasGroup's GroupTransparency causes sub-pixel shake during size
-            -- animations. Use a top-most overlay layer (added in CreateTab) and
-            -- tween its transparency — single composite layer ≈ CanvasGroup look.
+            -- Visual feedback: fade + accent stroke
             local stroke = frame:FindFirstChildOfClass("UIStroke")
             local origStrokeColor, origStrokeThick
             if stroke then
@@ -219,9 +216,8 @@ local function makeDraggable(frame, handle, onDragEnd)
                 origStrokeThick = stroke.Thickness
                 tw(stroke, {Color = C.Accent, Thickness = 2}, 0.12)
             end
-            local overlay = frame:FindFirstChild("DragFadeOverlay")
-            if overlay then
-                tw(overlay, {BackgroundTransparency = 0.55}, 0.12)
+            if frame:IsA("CanvasGroup") then
+                tw(frame, {GroupTransparency = 0.12}, 0.12)
             end
 
             input.Changed:Connect(function()
@@ -230,8 +226,8 @@ local function makeDraggable(frame, handle, onDragEnd)
                     if stroke then
                         tw(stroke, {Color = origStrokeColor, Thickness = origStrokeThick}, 0.18)
                     end
-                    if overlay then
-                        tw(overlay, {BackgroundTransparency = 1}, 0.18)
+                    if frame:IsA("CanvasGroup") then
+                        tw(frame, {GroupTransparency = 0}, 0.18)
                     end
                     if onDragEnd then
                         pcall(onDragEnd, frame.Position.X.Offset, frame.Position.Y.Offset)
@@ -429,20 +425,16 @@ function XiroLib:CreateWindow(config)
 
     local fadeTokens = setmetatable({}, {__mode = "k"}) -- panel -> token，弱引用
 
-    local FADE_OUT_DUR  = 0.16
-    local FADE_IN_DUR   = 0.24
-    local FADE_IN_SCALE = 0.28
-    local POP_START     = 0.9
-    local POP_END_OUT   = 0.94
+    local FADE_OUT_DUR  = 0.20
+    local FADE_IN_DUR   = 0.35
+    local FADE_IN_SCALE = 0.45
+    local POP_START     = 0.6
+    local POP_END_OUT   = 0.85
 
     local EASE_OUT_QUART = TweenInfo.new(FADE_IN_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
     local EASE_IN_QUART  = TweenInfo.new(FADE_OUT_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
     local EASE_BACK_OUT  = TweenInfo.new(FADE_IN_SCALE, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-    -- Without CanvasGroup we can't do a single-property uniform fade. Per-descendant
-    -- transparency tweens flooded TweenService (lag) and missed ScrollBarImage*
-    -- properties (ghost scrollbar lines). Drop transparency fade entirely; rely on
-    -- the existing scale-pop animation + panelContainer.Visible toggle for show/hide.
     local function fadeOutPanel(p, delay)
         local scale = ensurePanelScale(p)
         local stroke = p:FindFirstChildOfClass("UIStroke")
@@ -450,9 +442,10 @@ function XiroLib:CreateWindow(config)
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            pcall(function() TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play() end)
+            TS:Create(p, EASE_IN_QUART, {GroupTransparency = 1}):Play()
+            TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
             if stroke then
-                pcall(function() TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play() end)
+                TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play()
             end
         end)
     end
@@ -461,14 +454,16 @@ function XiroLib:CreateWindow(config)
         local scale = ensurePanelScale(p)
         local stroke = p:FindFirstChildOfClass("UIStroke")
         scale.Scale = POP_START
+        p.GroupTransparency = 1
         if stroke then stroke.Transparency = 1 end
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            pcall(function() TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play() end)
+            TS:Create(p, EASE_OUT_QUART, {GroupTransparency = 0}):Play()
+            TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play()
             if stroke then
-                pcall(function() TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play() end)
+                TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play()
             end
         end)
     end
@@ -577,31 +572,18 @@ function XiroLib:CreateWindow(config)
         panelCount = panelCount + 1
         local panelIndex = panelCount
 
-        -- Panel: TEST (v38) — Frame instead of CanvasGroup to diagnose right-3 shake.
-        -- Drag fade-out via GroupTransparency won't apply with Frame; functionally fine.
-        local panel = Instance.new("Frame")
+        -- Panel (CanvasGroup enables single-property fade via GroupTransparency)
+        local panel = Instance.new("CanvasGroup")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = false
+        panel.GroupTransparency = 0
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
-
-        -- Drag fade overlay: single composited layer to mimic CanvasGroup uniform
-        -- fade without the sub-pixel shake. Tweened by makeDraggable.
-        local fadeOverlay = Instance.new("Frame")
-        fadeOverlay.Name = "DragFadeOverlay"
-        fadeOverlay.Size = UDim2.new(1, 0, 1, 0)
-        fadeOverlay.BackgroundColor3 = C.Panel
-        fadeOverlay.BackgroundTransparency = 1
-        fadeOverlay.BorderSizePixel = 0
-        fadeOverlay.ZIndex = 1000
-        fadeOverlay.Active = false
-        fadeOverlay.Parent = panel
-        addCorner(fadeOverlay, CORNER_R)
 
         -- Title bar
         local titleBar = Instance.new("Frame")
