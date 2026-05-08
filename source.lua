@@ -1,4 +1,4 @@
---VER=37
+--VER=38
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -572,8 +572,9 @@ function XiroLib:CreateWindow(config)
         panelCount = panelCount + 1
         local panelIndex = panelCount
 
-        -- Panel (CanvasGroup enables single-property fade via GroupTransparency)
-        local panel = Instance.new("CanvasGroup")
+        -- Panel: TEST (v38) — Frame instead of CanvasGroup to diagnose right-3 shake.
+        -- Drag fade-out via GroupTransparency won't apply with Frame; functionally fine.
+        local panel = Instance.new("Frame")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
