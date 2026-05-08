@@ -1,4 +1,4 @@
---VER=48
+--VER=49
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -87,7 +87,7 @@ local toggleKeybind   = Enum.KeyCode.RightShift
 local openDropdown    = nil -- currently open dropdown closer
 local savedMouseBehavior = nil
 local FADE_STAGGER    = 0.08 -- stagger delay between panel fade-ins
-local FADE_STAGGER_OUT = 0.04 -- stagger delay for fade-out (稍快，收得干脆)
+local FADE_STAGGER_OUT = 0.06 -- stagger delay for fade-out (右→左方向)
 
 -- panel state persistence removed (didn't survive Roblox rejoins, pure overhead)
 -- defensive: clean up the legacy file if it still exists
@@ -425,11 +425,11 @@ function XiroLib:CreateWindow(config)
 
     local fadeTokens = setmetatable({}, {__mode = "k"}) -- panel -> token，弱引用
 
-    local FADE_OUT_DUR  = 0.20
+    local FADE_OUT_DUR  = 0.25
     local FADE_IN_DUR   = 0.35
     local FADE_IN_SCALE = 0.45
     local POP_START     = 0.6
-    local POP_END_OUT   = 0.85
+    local POP_END_OUT   = 0.55
 
     local EASE_OUT_QUART = TweenInfo.new(FADE_IN_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
     local EASE_IN_QUART  = TweenInfo.new(FADE_OUT_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
@@ -491,10 +491,12 @@ function XiroLib:CreateWindow(config)
                 if myToken == toggleToken then toggleBusy = false end
             end)
         else
+            -- Right→left collapse: rightmost panel fades first, leftmost last.
+            -- Mirrors the left→right open direction for a "rolling up" feel.
             for i, p in ipairs(panels) do
-                fadeOutPanel(p, (i - 1) * FADE_STAGGER_OUT)
+                fadeOutPanel(p, (#panels - i) * FADE_STAGGER_OUT)
             end
-            task.delay(#panels * FADE_STAGGER_OUT + 0.2, function()
+            task.delay(#panels * FADE_STAGGER_OUT + 0.25, function()
                 if myToken == toggleToken and not uiVisible then
                     panelContainer.Visible = false
                     restoreMouse()
