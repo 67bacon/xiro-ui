@@ -1,4 +1,4 @@
---VER=55
+--VER=56
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -730,7 +730,9 @@ function XiroLib:CreateWindow(config)
             header.BorderSizePixel = 0
             header.LayoutOrder = 0
             header.Parent = container
-            addCorner(header, CORNER_SM)
+            -- No UICorner: rounded header corners cut into the rectangle and
+            -- expose the content frame's darker BG at the 4 corners → "dark
+            -- corner spots". Sharp header edges match content edges cleanly.
             -- Softer border: 50% transparent for depth without hard line
             local headerStroke = Instance.new("UIStroke")
             headerStroke.Thickness = 1
