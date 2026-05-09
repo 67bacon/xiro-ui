@@ -1,4 +1,4 @@
---VER=50
+--VER=51
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -613,6 +613,7 @@ function XiroLib:CreateWindow(config)
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
+        panel.BackgroundTransparency = 0.15  -- slight glass feel; matches CanvasGroup's old visual
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = false
         panel.Parent = panelContainer
