@@ -1,4 +1,4 @@
---VER=51
+--VER=52
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -613,12 +613,30 @@ function XiroLib:CreateWindow(config)
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
-        panel.BackgroundTransparency = 0.15  -- slight glass feel; matches CanvasGroup's old visual
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = false
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
+
+        -- Subtle vertical gradient on panel BG for depth (top slightly brighter,
+        -- bottom slightly darker). This is what gave the CanvasGroup version
+        -- its richer "carved" look — re-create it explicitly here.
+        local panelGradient = Instance.new("UIGradient")
+        panelGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(
+                math.min(255, C.Panel.R * 255 + 8),
+                math.min(255, C.Panel.G * 255 + 8),
+                math.min(255, C.Panel.B * 255 + 8)
+            )),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(
+                math.max(0, C.Panel.R * 255 - 6),
+                math.max(0, C.Panel.G * 255 - 6),
+                math.max(0, C.Panel.B * 255 - 6)
+            )),
+        })
+        panelGradient.Rotation = 90
+        panelGradient.Parent = panel
 
         -- Title bar
         local titleBar = Instance.new("Frame")
