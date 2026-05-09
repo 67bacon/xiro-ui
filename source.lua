@@ -1,4 +1,4 @@
---VER=49
+--VER=50
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -216,18 +216,13 @@ local function makeDraggable(frame, handle, onDragEnd)
                 origStrokeThick = stroke.Thickness
                 tw(stroke, {Color = C.Accent, Thickness = 2}, 0.12)
             end
-            if frame:IsA("CanvasGroup") then
-                tw(frame, {GroupTransparency = 0.12}, 0.12)
-            end
+            -- Drag visual feedback via stroke only (Frame has no GroupTransparency).
 
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     moveHandlers[moveFn] = nil
                     if stroke then
                         tw(stroke, {Color = origStrokeColor, Thickness = origStrokeThick}, 0.18)
-                    end
-                    if frame:IsA("CanvasGroup") then
-                        tw(frame, {GroupTransparency = 0}, 0.18)
                     end
                     if onDragEnd then
                         pcall(onDragEnd, frame.Position.X.Offset, frame.Position.Y.Offset)
@@ -435,36 +430,72 @@ function XiroLib:CreateWindow(config)
     local EASE_IN_QUART  = TweenInfo.new(FADE_OUT_DUR, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
     local EASE_BACK_OUT  = TweenInfo.new(FADE_IN_SCALE, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
+    -- Per-descendant fade. Saves "visible" transparency to an attribute on each
+    -- instance the first time it's faded out, restores from attribute on fade-in.
+    -- Robust to dynamically-added children.
+    local FADE_ATTR_PREFIX = "_xrFade_"
+    local function eachFadeable(p, fn)
+        fn(p, "BackgroundTransparency")
+        for _, d in ipairs(p:GetDescendants()) do
+            if d:IsA("GuiObject") then
+                fn(d, "BackgroundTransparency")
+                if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+                    fn(d, "TextTransparency")
+                    fn(d, "TextStrokeTransparency")
+                end
+                if d:IsA("ImageLabel") or d:IsA("ImageButton") then
+                    fn(d, "ImageTransparency")
+                end
+                if d:IsA("ScrollingFrame") then
+                    fn(d, "ScrollBarImageTransparency")
+                end
+            elseif d:IsA("UIStroke") then
+                fn(d, "Transparency")
+            end
+        end
+    end
+
     local function fadeOutPanel(p, delay)
         local scale = ensurePanelScale(p)
-        local stroke = p:FindFirstChildOfClass("UIStroke")
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_IN_QUART, {GroupTransparency = 1}):Play()
             TS:Create(scale, EASE_IN_QUART, {Scale = POP_END_OUT}):Play()
-            if stroke then
-                TS:Create(stroke, EASE_IN_QUART, {Transparency = 1}):Play()
-            end
+            eachFadeable(p, function(inst, prop)
+                local cur = inst[prop]
+                if cur >= 1 then return end
+                local attr = FADE_ATTR_PREFIX .. prop
+                if inst:GetAttribute(attr) == nil then
+                    inst:SetAttribute(attr, cur)
+                end
+                TS:Create(inst, EASE_IN_QUART, {[prop] = 1}):Play()
+            end)
         end)
     end
 
     local function fadeInPanel(p, delay)
         local scale = ensurePanelScale(p)
-        local stroke = p:FindFirstChildOfClass("UIStroke")
         scale.Scale = POP_START
-        p.GroupTransparency = 1
-        if stroke then stroke.Transparency = 1 end
+        -- Snap everything to fully transparent before the staggered fade-in.
+        eachFadeable(p, function(inst, prop)
+            local attr = FADE_ATTR_PREFIX .. prop
+            if inst:GetAttribute(attr) == nil and inst[prop] < 1 then
+                inst:SetAttribute(attr, inst[prop])
+            end
+            inst[prop] = 1
+        end)
         fadeTokens[p] = (fadeTokens[p] or 0) + 1
         local myToken = fadeTokens[p]
         task.delay(delay, function()
             if fadeTokens[p] ~= myToken then return end
-            TS:Create(p, EASE_OUT_QUART, {GroupTransparency = 0}):Play()
             TS:Create(scale, EASE_BACK_OUT, {Scale = 1}):Play()
-            if stroke then
-                TS:Create(stroke, EASE_OUT_QUART, {Transparency = 0}):Play()
-            end
+            eachFadeable(p, function(inst, prop)
+                local attr = FADE_ATTR_PREFIX .. prop
+                local saved = inst:GetAttribute(attr)
+                if saved == nil then return end
+                TS:Create(inst, EASE_OUT_QUART, {[prop] = saved}):Play()
+            end)
         end)
     end
 
@@ -574,15 +605,16 @@ function XiroLib:CreateWindow(config)
         panelCount = panelCount + 1
         local panelIndex = panelCount
 
-        -- Panel (CanvasGroup enables single-property fade via GroupTransparency)
-        local panel = Instance.new("CanvasGroup")
+        -- Panel (Frame, NOT CanvasGroup — CanvasGroup's offscreen rasterization
+        -- causes sub-pixel shake on accordion expand. Fade-in/out now tweens
+        -- each descendant's transparency individually.)
+        local panel = Instance.new("Frame")
         panel.Name = "Panel_" .. tabName
         panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
         panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = false
-        panel.GroupTransparency = 0
         panel.Parent = panelContainer
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
