@@ -1,4 +1,4 @@
---VER=56
+--VER=57
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -730,9 +730,7 @@ function XiroLib:CreateWindow(config)
             header.BorderSizePixel = 0
             header.LayoutOrder = 0
             header.Parent = container
-            -- No UICorner: rounded header corners cut into the rectangle and
-            -- expose the content frame's darker BG at the 4 corners → "dark
-            -- corner spots". Sharp header edges match content edges cleanly.
+            addCorner(header, CORNER_SM)
             -- Softer border: 50% transparent for depth without hard line
             local headerStroke = Instance.new("UIStroke")
             headerStroke.Thickness = 1
@@ -807,22 +805,6 @@ function XiroLib:CreateWindow(config)
             headerBtn.BackgroundTransparency = 1
             headerBtn.Text = ""
             headerBtn.Parent = header
-
-            -- Hover highlight: stroke turns accent + slight bg lift on mouse enter.
-            local origHeaderColor = header.BackgroundColor3
-            local hoverHeaderColor = Color3.new(
-                math.min(1, origHeaderColor.R + 0.05),
-                math.min(1, origHeaderColor.G + 0.05),
-                math.min(1, origHeaderColor.B + 0.05)
-            )
-            headerBtn.MouseEnter:Connect(function()
-                tw(header, {BackgroundColor3 = hoverHeaderColor}, 0.15)
-                tw(headerStroke, {Color = C.Accent, Transparency = 0.2}, 0.15)
-            end)
-            headerBtn.MouseLeave:Connect(function()
-                tw(header, {BackgroundColor3 = origHeaderColor}, 0.18)
-                tw(headerStroke, {Color = C.Border, Transparency = 0.5}, 0.18)
-            end)
 
             -- Animate ONLY the accordion's own container.Size.
             -- The click handler orchestrates panel/scrollFrame/canvas tweens at the
