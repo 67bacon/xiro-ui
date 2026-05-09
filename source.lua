@@ -1,4 +1,4 @@
---VER=53
+--VER=54
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -587,6 +587,31 @@ function XiroLib:CreateWindow(config)
         addCorner(panel, CORNER_R)
         addStroke(panel, 1, C.Border)
 
+        -- Drop shadow under panel: 9-slice softshadow image, slightly larger
+        -- than the panel and offset down. Sits behind via lower ZIndex on its
+        -- own ImageLabel (parented as sibling so it doesn't get clipped/faded).
+        local shadow = Instance.new("ImageLabel")
+        shadow.Name = "Panel_" .. tabName .. "_Shadow"
+        shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+        shadow.BackgroundTransparency = 1
+        shadow.Image = "rbxassetid://6014261993"
+        shadow.ImageColor3 = Color3.new(0, 0, 0)
+        shadow.ImageTransparency = 0.45
+        shadow.ScaleType = Enum.ScaleType.Slice
+        shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+        shadow.ZIndex = panel.ZIndex - 1
+        shadow.Parent = panelContainer
+        local function syncShadow()
+            shadow.Size = UDim2.new(0, panel.AbsoluteSize.X + 40, 0, panel.AbsoluteSize.Y + 40)
+            shadow.Position = UDim2.new(
+                0, panel.Position.X.Offset + panel.AbsoluteSize.X / 2,
+                0, panel.Position.Y.Offset + panel.AbsoluteSize.Y / 2 + 4
+            )
+        end
+        syncShadow()
+        panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(syncShadow)
+        panel:GetPropertyChangedSignal("Position"):Connect(syncShadow)
+
         -- Title bar
         local titleBar = Instance.new("Frame")
         titleBar.Name = "TitleBar"
@@ -805,6 +830,22 @@ function XiroLib:CreateWindow(config)
             headerBtn.BackgroundTransparency = 1
             headerBtn.Text = ""
             headerBtn.Parent = header
+
+            -- Hover highlight: stroke turns accent + slight bg lift on mouse enter.
+            local origHeaderColor = header.BackgroundColor3
+            local hoverHeaderColor = Color3.new(
+                math.min(1, origHeaderColor.R + 0.05),
+                math.min(1, origHeaderColor.G + 0.05),
+                math.min(1, origHeaderColor.B + 0.05)
+            )
+            headerBtn.MouseEnter:Connect(function()
+                tw(header, {BackgroundColor3 = hoverHeaderColor}, 0.15)
+                tw(headerStroke, {Color = C.Accent, Transparency = 0.2}, 0.15)
+            end)
+            headerBtn.MouseLeave:Connect(function()
+                tw(header, {BackgroundColor3 = origHeaderColor}, 0.18)
+                tw(headerStroke, {Color = C.Border, Transparency = 0.5}, 0.18)
+            end)
 
             -- Animate ONLY the accordion's own container.Size.
             -- The click handler orchestrates panel/scrollFrame/canvas tweens at the
