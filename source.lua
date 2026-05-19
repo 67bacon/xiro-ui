@@ -1,4 +1,4 @@
---VER=57
+--VER=58
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -16,24 +16,26 @@ local HttpService   = game:GetService("HttpService")
 local LocalPlayer   = Players.LocalPlayer
 
 ---------- THEME ----------
+-- Premium dark palette: deeper blacks, subtle elevation tiers, richer accent.
+-- Replaces 2024-era flat palette with modern OLED-style contrast.
 local C = {
-    BG          = Color3.fromRGB(18, 18, 24),
-    Panel       = Color3.fromRGB(24, 24, 32),
-    TitleBar    = Color3.fromRGB(30, 30, 40),
-    Elem        = Color3.fromRGB(36, 36, 48),
-    ElemHover   = Color3.fromRGB(48, 48, 62),
-    Text        = Color3.fromRGB(225, 225, 235),
-    SubText     = Color3.fromRGB(130, 130, 150),
-    Accent      = Color3.fromRGB(140, 100, 255),
-    AccentDark  = Color3.fromRGB(100, 70, 200),
-    ToggleOn    = Color3.fromRGB(140, 100, 255),
-    ToggleOff   = Color3.fromRGB(70, 70, 85),
-    SliderFill  = Color3.fromRGB(140, 100, 255),
-    SliderBG    = Color3.fromRGB(42, 42, 54),
-    SectionText = Color3.fromRGB(110, 100, 160),
-    Border      = Color3.fromRGB(42, 42, 56),
-    ScrollBar   = Color3.fromRGB(55, 55, 68),
-    Notif       = Color3.fromRGB(28, 28, 38),
+    BG          = Color3.fromRGB(10, 10, 14),     -- near-black base
+    Panel       = Color3.fromRGB(16, 16, 22),     -- panel body (subtle elevation)
+    TitleBar    = Color3.fromRGB(22, 22, 30),     -- title gradient start
+    Elem        = Color3.fromRGB(26, 26, 36),     -- element rest
+    ElemHover   = Color3.fromRGB(38, 38, 52),     -- element hover (bigger jump)
+    Text        = Color3.fromRGB(240, 240, 250),  -- brighter primary
+    SubText     = Color3.fromRGB(140, 140, 160),
+    Accent      = Color3.fromRGB(155, 110, 255),  -- richer purple
+    AccentDark  = Color3.fromRGB(115, 80, 215),
+    ToggleOn    = Color3.fromRGB(155, 110, 255),
+    ToggleOff   = Color3.fromRGB(58, 58, 74),
+    SliderFill  = Color3.fromRGB(155, 110, 255),
+    SliderBG    = Color3.fromRGB(34, 34, 46),
+    SectionText = Color3.fromRGB(125, 115, 175),
+    Border      = Color3.fromRGB(50, 50, 68),     -- slightly brighter for definition
+    ScrollBar   = Color3.fromRGB(65, 65, 82),
+    Notif       = Color3.fromRGB(20, 20, 28),
 }
 
 local THEMES = {
@@ -58,10 +60,11 @@ local SLIDER_H     = 46
 local DROPDOWN_H   = 46
 local SECTION_H    = 24
 local ACCORDION_H  = 28
-local PAD           = 8
-local GAP           = 6
-local CORNER_R      = 6
-local CORNER_SM     = 4
+-- Slightly more breathing room + softer corners (more modern).
+local PAD           = 10
+local GAP           = 7
+local CORNER_R      = 10
+local CORNER_SM     = 6
 local MAX_PANEL_CONTENT = 720
 local FONT          = Enum.Font.Gotham
 local FONT_BOLD     = Enum.Font.GothamBold
