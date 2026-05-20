@@ -1,4 +1,4 @@
---VER=60
+--VER=61
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -1013,26 +1013,10 @@ function XiroLib:CreateWindow(config)
                 local function stopPulse() pulseRemove(stripe) end
                 if enabled then startPulse() end
 
-                -- Sub-toggle: draw a thin L-bracket connector on the left side
-                -- showing visual hierarchy with the parent.
-                if isSub then
-                    local branchV = Instance.new("Frame")
-                    branchV.Size = UDim2.new(0, 1, 0.5, 2)
-                    branchV.Position = UDim2.new(0, 16, 0, -2)
-                    branchV.BackgroundColor3 = C.Border
-                    branchV.BackgroundTransparency = 0.3
-                    branchV.BorderSizePixel = 0
-                    branchV.Parent = frame
-                    local branchH = Instance.new("Frame")
-                    branchH.Size = UDim2.new(0, 8, 0, 1)
-                    branchH.Position = UDim2.new(0, 16, 0.5, 0)
-                    branchH.BackgroundColor3 = C.Border
-                    branchH.BackgroundTransparency = 0.3
-                    branchH.BorderSizePixel = 0
-                    branchH.Parent = frame
-                end
-
-                local labelXOffset = isSub and 30 or 14
+                -- Sub-toggle hierarchy is now conveyed purely by size + tint +
+                -- indent. No connector line — user feedback v61 said it was visually
+                -- noisy.
+                local labelXOffset = isSub and 20 or 14
                 local label = Instance.new("TextLabel")
                 label.Size = UDim2.new(1, -52 - (isSub and 16 or 0), 1, 0)
                 label.Position = UDim2.new(0, labelXOffset, 0, 0)
