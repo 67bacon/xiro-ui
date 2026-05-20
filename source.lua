@@ -1,4 +1,4 @@
---VER=58
+--VER=59
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -976,6 +976,10 @@ function XiroLib:CreateWindow(config)
                 cfg = cfg or {}
                 local enabled = cfg.CurrentValue or false
                 local flag = cfg.Flag
+                -- Sub-toggle support (v59): if cfg.Parent is another toggle object,
+                -- this toggle visually indents + grays out when parent is off + click
+                -- is suppressed in that state.
+                local isSub = type(cfg.Parent) == "table" and type(cfg.Parent._subToggles) == "table"
 
                 local frame = Instance.new("Frame")
                 frame.Name = "Toggle_" .. (cfg.Name or "")
@@ -1000,9 +1004,29 @@ function XiroLib:CreateWindow(config)
                 local function stopPulse() pulseRemove(stripe) end
                 if enabled then startPulse() end
 
+                -- Sub-toggle: draw a thin L-bracket connector on the left side
+                -- showing visual hierarchy with the parent.
+                if isSub then
+                    local branchV = Instance.new("Frame")
+                    branchV.Size = UDim2.new(0, 1, 0.5, 2)
+                    branchV.Position = UDim2.new(0, 16, 0, -2)
+                    branchV.BackgroundColor3 = C.Border
+                    branchV.BackgroundTransparency = 0.3
+                    branchV.BorderSizePixel = 0
+                    branchV.Parent = frame
+                    local branchH = Instance.new("Frame")
+                    branchH.Size = UDim2.new(0, 8, 0, 1)
+                    branchH.Position = UDim2.new(0, 16, 0.5, 0)
+                    branchH.BackgroundColor3 = C.Border
+                    branchH.BackgroundTransparency = 0.3
+                    branchH.BorderSizePixel = 0
+                    branchH.Parent = frame
+                end
+
+                local labelXOffset = isSub and 30 or 14
                 local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, -52, 1, 0)
-                label.Position = UDim2.new(0, 14, 0, 0)
+                label.Size = UDim2.new(1, -52 - (isSub and 16 or 0), 1, 0)
+                label.Position = UDim2.new(0, labelXOffset, 0, 0)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Toggle"
                 label.TextColor3 = C.Text
@@ -1059,8 +1083,20 @@ function XiroLib:CreateWindow(config)
                 local DOT_BASE_SIZE = UDim2.new(0, 14, 0, 14)
                 local DOT_POP_SIZE = UDim2.new(0, 18, 0, 18)
                 local dotToken = 0
+                local toggleObj = {}
+                toggleObj.CurrentValue = enabled
+                toggleObj._subToggles = {}
+
+                local function propagateToSubs()
+                    for _, sub in ipairs(toggleObj._subToggles) do
+                        if sub.SetInteractable then sub:SetInteractable(enabled) end
+                    end
+                end
+
                 btn.MouseButton1Click:Connect(function()
+                    if not btn.Active then return end  -- sub-toggle disabled by parent
                     enabled = not enabled
+                    toggleObj.CurrentValue = enabled  -- keep public value in sync
                     updateVisual()
                     dotToken = dotToken + 1
                     local myToken = dotToken
@@ -1072,13 +1108,12 @@ function XiroLib:CreateWindow(config)
                     end)
                     if flag then updateFlag(flag, enabled) end
                     if cfg.Callback then task.spawn(cfg.Callback, enabled) end
+                    propagateToSubs()
                 end)
 
                 btn.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
                 btn.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.1) end)
 
-                local toggleObj = {}
-                toggleObj.CurrentValue = enabled
                 function toggleObj:Set(val)
                     if type(val) == "boolean" then
                         enabled = val
@@ -1086,8 +1121,28 @@ function XiroLib:CreateWindow(config)
                         updateVisual()
                         if flag then updateFlag(flag, enabled) end
                         if cfg.Callback then task.spawn(cfg.Callback, enabled) end
+                        propagateToSubs()
                     end
                 end
+
+                -- Sub-toggle interactability — set by parent. When parent is off,
+                -- sub-toggle frame fades + click is suppressed (btn.Active = false).
+                function toggleObj:SetInteractable(canInteract)
+                    btn.Active = canInteract
+                    btn.AutoButtonColor = canInteract
+                    label.TextTransparency = canInteract and 0 or 0.55
+                    indicator.BackgroundTransparency = canInteract and 0 or 0.4
+                    pcall(function() indicatorStroke.Transparency = canInteract and (enabled and 0.2 or 0) or 0.7 end)
+                end
+
+                if isSub then
+                    table.insert(cfg.Parent._subToggles, toggleObj)
+                    -- Inherit parent state on creation
+                    if cfg.Parent.CurrentValue == false then
+                        toggleObj:SetInteractable(false)
+                    end
+                end
+
                 if flag then registerFlag(flag, enabled, function(val) toggleObj:Set(val) end) end
                 return toggleObj
             end
