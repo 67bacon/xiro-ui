@@ -1,4 +1,4 @@
---VER=59
+--VER=60
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -980,16 +980,25 @@ function XiroLib:CreateWindow(config)
                 -- this toggle visually indents + grays out when parent is off + click
                 -- is suppressed in that state.
                 local isSub = type(cfg.Parent) == "table" and type(cfg.Parent._subToggles) == "table"
+                -- Sub-toggle sizing: scaled-down dimensions so sub items visually
+                -- read as "accessory" instead of equal-rank siblings.
+                local subH      = isSub and 24 or ELEM_H        -- frame height
+                local subFs     = isSub and FSIZE_SMALL or FSIZE -- label font
+                local subIndW   = isSub and 26 or 36            -- toggle indicator width
+                local subIndH   = isSub and 13 or 18            -- toggle indicator height
+                local subDotBase= isSub and 9 or 14             -- dot resting size
+                local subDotPop = isSub and 12 or 18            -- dot click-pop size
 
                 local frame = Instance.new("Frame")
                 frame.Name = "Toggle_" .. (cfg.Name or "")
-                frame.Size = UDim2.new(1, 0, 0, ELEM_H)
-                frame.BackgroundColor3 = C.Elem
+                frame.Size = UDim2.new(1, 0, 0, subH)
+                frame.BackgroundColor3 = isSub and C.Panel or C.Elem  -- subtler tint
+                frame.BackgroundTransparency = isSub and 0.3 or 0
                 frame.BorderSizePixel = 0
                 frame.LayoutOrder = accNextOrder()
                 frame.Parent = content
                 addCorner(frame, CORNER_SM)
-                addStroke(frame, 1, C.Border)
+                if not isSub then addStroke(frame, 1, C.Border) end  -- no border on subs
 
                 local stripe = Instance.new("Frame")
                 stripe.Size = UDim2.new(0, 3, 1, -10)
@@ -1029,21 +1038,25 @@ function XiroLib:CreateWindow(config)
                 label.Position = UDim2.new(0, labelXOffset, 0, 0)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Toggle"
-                label.TextColor3 = C.Text
+                label.TextColor3 = isSub and C.SubText or C.Text
                 label.Font = FONT
-                label.TextSize = FSIZE
+                label.TextSize = subFs
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.TextTruncate = Enum.TextTruncate.AtEnd
                 label.Parent = frame
 
+                local _dotOnPos    = UDim2.new(1, -(subDotBase + 2), 0.5, -subDotBase/2)
+                local _dotOffPos   = UDim2.new(0, 2, 0.5, -subDotBase/2)
+                local _dotPopOn    = UDim2.new(1, -(subDotPop + 0), 0.5, -subDotPop/2)
+                local _dotPopOff   = UDim2.new(0, 0, 0.5, -subDotPop/2)
+
                 local indicator = Instance.new("Frame")
-                indicator.Size = UDim2.new(0, 36, 0, 18)
-                indicator.Position = UDim2.new(1, -38, 0.5, -9)
+                indicator.Size = UDim2.new(0, subIndW, 0, subIndH)
+                indicator.Position = UDim2.new(1, -(subIndW + 2), 0.5, -subIndH/2)
                 indicator.BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff
                 indicator.BorderSizePixel = 0
                 indicator.Parent = frame
-                addCorner(indicator, 9)
-                -- D: glow stroke that brightens with accent when toggle enabled
+                addCorner(indicator, math.floor(subIndH/2))
                 local indicatorStroke = Instance.new("UIStroke")
                 indicatorStroke.Thickness = 1
                 indicatorStroke.Color = enabled and C.ToggleOn or C.Border
@@ -1051,16 +1064,16 @@ function XiroLib:CreateWindow(config)
                 indicatorStroke.Parent = indicator
 
                 local dot = Instance.new("Frame")
-                dot.Size = UDim2.new(0, 14, 0, 14)
-                dot.Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+                dot.Size = UDim2.new(0, subDotBase, 0, subDotBase)
+                dot.Position = enabled and _dotOnPos or _dotOffPos
                 dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 dot.BorderSizePixel = 0
                 dot.Parent = indicator
-                addCorner(dot, 7)
+                addCorner(dot, math.floor(subDotBase/2))
 
                 local function updateVisual()
                     tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
-                    tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
+                    tw(dot, {Position = enabled and _dotOnPos or _dotOffPos}, 0.15)
                     -- D: tween stroke for soft glow effect
                     pcall(function()
                         indicatorStroke.Color = enabled and C.ToggleOn or C.Border
@@ -1080,8 +1093,8 @@ function XiroLib:CreateWindow(config)
                 btn.Text = ""
                 btn.Parent = frame
 
-                local DOT_BASE_SIZE = UDim2.new(0, 14, 0, 14)
-                local DOT_POP_SIZE = UDim2.new(0, 18, 0, 18)
+                local DOT_BASE_SIZE = UDim2.new(0, subDotBase, 0, subDotBase)
+                local DOT_POP_SIZE  = UDim2.new(0, subDotPop, 0, subDotPop)
                 local dotToken = 0
                 local toggleObj = {}
                 toggleObj.CurrentValue = enabled
@@ -1100,10 +1113,10 @@ function XiroLib:CreateWindow(config)
                     updateVisual()
                     dotToken = dotToken + 1
                     local myToken = dotToken
-                    tw(dot, {Size = DOT_POP_SIZE, Position = enabled and UDim2.new(1, -18, 0.5, -9) or UDim2.new(0, 0, 0.5, -9)}, 0.08)
+                    tw(dot, {Size = DOT_POP_SIZE, Position = enabled and _dotPopOn or _dotPopOff}, 0.08)
                     task.delay(0.12, function()
                         if myToken == dotToken then
-                            tw(dot, {Size = DOT_BASE_SIZE, Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.12)
+                            tw(dot, {Size = DOT_BASE_SIZE, Position = enabled and _dotOnPos or _dotOffPos}, 0.12)
                         end
                     end)
                     if flag then updateFlag(flag, enabled) end
