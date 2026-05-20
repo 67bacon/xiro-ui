@@ -1,4 +1,4 @@
---VER=61
+--VER=62
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -982,12 +982,14 @@ function XiroLib:CreateWindow(config)
                 local isSub = type(cfg.Parent) == "table" and type(cfg.Parent._subToggles) == "table"
                 -- Sub-toggle sizing: scaled-down dimensions so sub items visually
                 -- read as "accessory" instead of equal-rank siblings.
+                -- Use EVEN sizes so /2 stays integer — Roblox UI on sub-pixel
+                -- positions renders with 1px shift, breaking dot centering.
                 local subH      = isSub and 24 or ELEM_H        -- frame height
                 local subFs     = isSub and FSIZE_SMALL or FSIZE -- label font
                 local subIndW   = isSub and 26 or 36            -- toggle indicator width
-                local subIndH   = isSub and 13 or 18            -- toggle indicator height
-                local subDotBase= isSub and 9 or 14             -- dot resting size
-                local subDotPop = isSub and 12 or 18            -- dot click-pop size
+                local subIndH   = isSub and 14 or 18            -- toggle indicator height (was 13 → 14 for sym)
+                local subDotBase= isSub and 10 or 14            -- dot resting size (was 9 → 10 for sym)
+                local subDotPop = isSub and 14 or 18            -- dot click-pop size
 
                 local frame = Instance.new("Frame")
                 frame.Name = "Toggle_" .. (cfg.Name or "")
