@@ -32,81 +32,66 @@ if not _G[_STATE_KEY] then
 end
 local _STATE = _G[_STATE_KEY]
 
----------- THEME (v1 redesign — Electric Purple, drop-in from handoff/tokens.lua) ----------
--- Roblox has no backdrop-filter. Panel "glass" is faked with
--- BackgroundTransparency 0.20-0.22 on a slightly-blue near-black.
-local ACCENT = {
-    Accent       = Color3.fromRGB(167, 139, 250),   -- #a78bfa main
-    AccentDeep   = Color3.fromRGB(124,  92, 245),   -- #7c5cf5 gradient end / pressed
-    AccentText   = Color3.fromRGB(196, 181, 253),   -- #c4b5fd text on accent-soft bg
-    AccentSoft   = Color3.fromRGB(167, 139, 250),   -- pair with BgTransparency 0.86
-    AccentEdge   = Color3.fromRGB(167, 139, 250),   -- pair with UIStroke Transparency 0.58
-    AccentGlow   = Color3.fromRGB(167, 139, 250),   -- pair with UIStroke Transparency 0.45
-}
-
+---------- THEME (v64 redesign — glassy dark, electric purple) ----------
+-- Roblox has no backdrop-filter; "glass" = BackgroundTransparency 0.20 on near-black.
 local C = {
-    -- accent
-    Accent       = ACCENT.Accent,
-    AccentDark   = ACCENT.AccentDeep,
-    AccentText   = ACCENT.AccentText,
-    AccentSoft   = ACCENT.AccentSoft,
-    AccentEdge   = ACCENT.AccentEdge,
-    AccentGlow   = ACCENT.AccentGlow,
+    -- accent (electric purple)
+    Accent       = Color3.fromRGB(167, 139, 250),  -- #a78bfa
+    AccentDark   = Color3.fromRGB(124,  92, 245),  -- #7c5cf5  (gradient end / pressed)
+    AccentText   = Color3.fromRGB(196, 181, 253),  -- #c4b5fd  (text on accent-soft bg)
+    AccentSoft   = Color3.fromRGB(167, 139, 250),  -- pair w/ BackgroundTransparency 0.86
+    AccentEdge   = Color3.fromRGB(167, 139, 250),  -- pair w/ UIStroke Transparency 0.58
+    AccentGlow   = Color3.fromRGB(167, 139, 250),  -- pair w/ UIStroke Transparency 0.45 + Thickness 2
 
-    -- surfaces (dark base)
-    BG           = Color3.fromRGB( 7,   7,  13),
-    Panel        = Color3.fromRGB(14,  14,  22),
-    TitleBar     = Color3.fromRGB(28,  28,  44),
-    TitleBarEnd  = Color3.fromRGB(18,  18,  28),
-    Surface0     = Color3.fromRGB(10,  10,  18),
-    Surface1     = Color3.fromRGB(18,  18,  28),
-    Elem         = Color3.fromRGB(26,  26,  38),
-    ElemHover    = Color3.fromRGB(35,  35,  51),
-    ElemActive   = Color3.fromRGB(44,  44,  64),
-    SliderBG     = Color3.fromRGB(21,  21,  31),
+    -- surfaces
+    BG           = Color3.fromRGB(  7,   7,  13),  -- loading screen
+    Panel        = Color3.fromRGB( 14,  14,  22),  -- panel body (use BgTransp 0.20)
+    TitleBar     = Color3.fromRGB( 28,  28,  44),  -- titlebar gradient start
+    TitleBarEnd  = Color3.fromRGB( 18,  18,  28),  -- titlebar gradient end
+    Surface0     = Color3.fromRGB( 10,  10,  18),  -- deepest (accordion body)
+    Surface1     = Color3.fromRGB( 18,  18,  28),  -- accordion shell
+    Elem         = Color3.fromRGB( 26,  26,  38),  -- control rest
+    ElemHover    = Color3.fromRGB( 35,  35,  51),  -- control hover
+    ElemActive   = Color3.fromRGB( 44,  44,  64),
+    SliderBG     = Color3.fromRGB( 21,  21,  31),
 
-    -- toggle/slider compat names
-    ToggleOn     = ACCENT.Accent,
-    ToggleOff    = Color3.fromRGB(44,  44,  64),
-    SliderFill   = ACCENT.Accent,
+    -- compat aliases (old code paths reference these names)
+    ToggleOn     = Color3.fromRGB(167, 139, 250),
+    ToggleOff    = Color3.fromRGB( 44,  44,  64),
+    SliderFill   = Color3.fromRGB(167, 139, 250),
 
     -- text
     Text         = Color3.fromRGB(244, 244, 251),
     SubText      = Color3.fromRGB(168, 168, 189),
     Muted        = Color3.fromRGB(108, 108, 132),
     Disabled     = Color3.fromRGB( 69,  69,  90),
-    SectionText  = ACCENT.AccentText,
+    SectionText  = Color3.fromRGB(196, 181, 253),
 
-    -- borders (UIStroke only; pair with the Transparency in A.* below)
-    Border       = Color3.fromRGB(255, 255, 255),
-    BorderStrong = Color3.fromRGB(255, 255, 255),
-    BorderHair   = Color3.fromRGB(255, 255, 255),
+    -- borders (UIStroke uses these w/ transparency)
+    Border       = Color3.fromRGB( 50,  50,  68),  -- dark stroke (default for addStroke; opaque ok)
+    BorderHair   = Color3.fromRGB(255, 255, 255),  -- white stroke; pair w/ Transparency 0.92/0.95
 
-    -- misc
     ScrollBar    = Color3.fromRGB( 65,  65,  82),
     Notif        = Color3.fromRGB( 14,  14,  22),
 }
 
----------- TRANSPARENCY CONSTANTS ----------
--- Roblox splits "rgba" into BackgroundColor3 + BackgroundTransparency.
+-- Alpha constants (the "rgba" half of CSS, since Roblox splits color+alpha)
 local A = {
-    PanelGlass      = 0.20,
-    PanelGlassNotif = 0.15,
-    AccentSoft      = 0.86,
-    AccentEdge      = 0.58,
-    AccentGlow      = 0.45,
-    BorderHair      = 0.95,
-    BorderSoft      = 0.92,
-    BorderStrong    = 0.87,
+    PanelGlass   = 0.20,
+    AccentSoft   = 0.86,
+    AccentEdge   = 0.58,
+    AccentGlow   = 0.45,
+    BorderSoft   = 0.92,
+    BorderHair   = 0.95,
 }
 
 local THEMES = {
-    Amethyst = {Accent=Color3.fromRGB(167,139,250), AccentDark=Color3.fromRGB(124, 92,245), ToggleOn=Color3.fromRGB(167,139,250), SliderFill=Color3.fromRGB(167,139,250), SectionText=Color3.fromRGB(196,181,253)},
-    Cyan     = {Accent=Color3.fromRGB( 34,211,238), AccentDark=Color3.fromRGB(  8,145,178), ToggleOn=Color3.fromRGB( 34,211,238), SliderFill=Color3.fromRGB( 34,211,238), SectionText=Color3.fromRGB(103,232,249)},
-    Crimson  = {Accent=Color3.fromRGB(255, 80,100), AccentDark=Color3.fromRGB(200, 50, 70), ToggleOn=Color3.fromRGB(255, 80,100), SliderFill=Color3.fromRGB(255, 80,100), SectionText=Color3.fromRGB(180,100,110)},
-    Emerald  = {Accent=Color3.fromRGB( 80,220,130), AccentDark=Color3.fromRGB( 50,170,100), ToggleOn=Color3.fromRGB( 80,220,130), SliderFill=Color3.fromRGB( 80,220,130), SectionText=Color3.fromRGB(100,170,130)},
-    Amber    = {Accent=Color3.fromRGB(255,180, 80), AccentDark=Color3.fromRGB(200,140, 50), ToggleOn=Color3.fromRGB(255,180, 80), SliderFill=Color3.fromRGB(255,180, 80), SectionText=Color3.fromRGB(180,150,100)},
-    Rose     = {Accent=Color3.fromRGB(255,130,180), AccentDark=Color3.fromRGB(200, 90,140), ToggleOn=Color3.fromRGB(255,130,180), SliderFill=Color3.fromRGB(255,130,180), SectionText=Color3.fromRGB(180,130,160)},
+    Amethyst = {Accent=Color3.fromRGB(167,139,250), AccentDark=Color3.fromRGB(124, 92,245), AccentText=Color3.fromRGB(196,181,253), AccentSoft=Color3.fromRGB(167,139,250), AccentEdge=Color3.fromRGB(167,139,250), AccentGlow=Color3.fromRGB(167,139,250), ToggleOn=Color3.fromRGB(167,139,250), SliderFill=Color3.fromRGB(167,139,250), SectionText=Color3.fromRGB(196,181,253)},
+    Cyan     = {Accent=Color3.fromRGB( 34,211,238), AccentDark=Color3.fromRGB(  8,145,178), AccentText=Color3.fromRGB(103,232,249), AccentSoft=Color3.fromRGB( 34,211,238), AccentEdge=Color3.fromRGB( 34,211,238), AccentGlow=Color3.fromRGB( 34,211,238), ToggleOn=Color3.fromRGB( 34,211,238), SliderFill=Color3.fromRGB( 34,211,238), SectionText=Color3.fromRGB(103,232,249)},
+    Crimson  = {Accent=Color3.fromRGB(255, 80,100), AccentDark=Color3.fromRGB(200, 50, 70), AccentText=Color3.fromRGB(255,150,160), AccentSoft=Color3.fromRGB(255, 80,100), AccentEdge=Color3.fromRGB(255, 80,100), AccentGlow=Color3.fromRGB(255, 80,100), ToggleOn=Color3.fromRGB(255, 80,100), SliderFill=Color3.fromRGB(255, 80,100), SectionText=Color3.fromRGB(255,150,160)},
+    Emerald  = {Accent=Color3.fromRGB( 80,220,130), AccentDark=Color3.fromRGB( 50,170,100), AccentText=Color3.fromRGB(150,240,180), AccentSoft=Color3.fromRGB( 80,220,130), AccentEdge=Color3.fromRGB( 80,220,130), AccentGlow=Color3.fromRGB( 80,220,130), ToggleOn=Color3.fromRGB( 80,220,130), SliderFill=Color3.fromRGB( 80,220,130), SectionText=Color3.fromRGB(150,240,180)},
+    Amber    = {Accent=Color3.fromRGB(255,180, 80), AccentDark=Color3.fromRGB(200,140, 50), AccentText=Color3.fromRGB(255,210,140), AccentSoft=Color3.fromRGB(255,180, 80), AccentEdge=Color3.fromRGB(255,180, 80), AccentGlow=Color3.fromRGB(255,180, 80), ToggleOn=Color3.fromRGB(255,180, 80), SliderFill=Color3.fromRGB(255,180, 80), SectionText=Color3.fromRGB(255,210,140)},
+    Rose     = {Accent=Color3.fromRGB(255,130,180), AccentDark=Color3.fromRGB(200, 90,140), AccentText=Color3.fromRGB(255,180,210), AccentSoft=Color3.fromRGB(255,130,180), AccentEdge=Color3.fromRGB(255,130,180), AccentGlow=Color3.fromRGB(255,130,180), ToggleOn=Color3.fromRGB(255,130,180), SliderFill=Color3.fromRGB(255,130,180), SectionText=Color3.fromRGB(255,180,210)},
 }
 
 local function applyTheme(name)
@@ -114,84 +99,32 @@ local function applyTheme(name)
     for k, v in pairs(t) do C[k] = v end
 end
 
----------- LAYOUT (v1 redesign — drop-in from handoff/tokens.lua) ----------
-local L = {
-    PANEL_W        = 320,
-    TITLE_H        = 42,
-    ELEM_H         = 36,
-    SLIDER_H       = 56,
-    DROPDOWN_H     = 36,
-    SECTION_H      = 28,
-    ACCORDION_H    = 34,
-    SUB_TOGGLE_H   = 28,
-
-    -- Spacing scale
-    SP1 = 4, SP2 = 8, SP3 = 12, SP4 = 16, SP5 = 24, SP6 = 32,
-
-    PAD            = 12,
-    GAP            = 8,
-    ROW_GAP        = 4,
-
-    -- Radius scale
-    R_XS = 4, R_SM = 6, R_MD = 10, R_LG = 14, R_XL = 18,
-
-    -- Control internals
-    TOGGLE_W       = 32, TOGGLE_H       = 18, TOGGLE_DOT     = 12,
-    TOGGLE_W_SUB   = 26, TOGGLE_H_SUB   = 14, TOGGLE_DOT_SUB = 9,
-    SLIDER_TRACK_H = 6,  SLIDER_THUMB   = 14,
-    KEYCHIP_W      = 60, KEYCHIP_H      = 22,
-    COLOR_SWATCH   = 22, STRIPE_W       = 3,
-
-    MAX_PANEL_CONTENT = 720,
-
-    -- Fonts (Roblox lacks JetBrains Mono → Enum.Font.Code substitution)
-    FONT       = Enum.Font.Gotham,
-    FONT_SEMI  = Enum.Font.GothamSemibold,
-    FONT_BOLD  = Enum.Font.GothamBold,
-    FONT_MONO  = Enum.Font.Code,
-
-    FSIZE_TITLE   = 14,
-    FSIZE_SECTION = 11,
-    FSIZE         = 13,
-    FSIZE_VALUE   = 12,
-    FSIZE_CAPTION = 10,
-    FSIZE_MONO    = 11,
-}
-
----------- LEGACY BARE-LOCAL ALIASES ----------
--- Existing call sites use bare names (PANEL_W etc.) — keep them as aliases of L.*
--- so unpatched code continues to compile. New code in this file should use L.X.
-local PANEL_W           = L.PANEL_W
-local TITLE_H           = L.TITLE_H
-local ELEM_H            = L.ELEM_H
-local SLIDER_H          = L.SLIDER_H
-local DROPDOWN_H        = L.DROPDOWN_H
-local SECTION_H         = L.SECTION_H
-local ACCORDION_H       = L.ACCORDION_H
-local PAD               = L.PAD
-local GAP               = L.GAP
-local CORNER_R          = L.R_XL
-local CORNER_SM         = L.R_SM
-local MAX_PANEL_CONTENT = L.MAX_PANEL_CONTENT
-local FONT              = L.FONT
-local FONT_BOLD         = L.FONT_BOLD
-local FONT_SEMI         = L.FONT_SEMI
-local FSIZE             = L.FSIZE
-local FSIZE_TITLE       = L.FSIZE_TITLE
-local FSIZE_SMALL       = L.FSIZE_SECTION
-
----------- MOTION (TweenInfo presets from handoff/motion.lua) ----------
-local TWEEN = {
-    Fast      = TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Base      = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Slow      = TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    Pop       = TweenInfo.new(0.10, Enum.EasingStyle.Back,  Enum.EasingDirection.Out),
-    PopBack   = TweenInfo.new(0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    PanelIn   = TweenInfo.new(0.45, Enum.EasingStyle.Back,  Enum.EasingDirection.Out),
-    PanelOut  = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
-    KeyPulse  = TweenInfo.new(0.70, Enum.EasingStyle.Sine,  Enum.EasingDirection.InOut, -1, true),
-    SliderSnap= TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-}
+---------- LAYOUT CONSTANTS ----------
+local PANEL_W      = 320      -- was 300
+local TITLE_H      = 42       -- was 32 (taller titlebar w/ gradient + dot)
+local ELEM_H       = 36       -- was 34
+local SLIDER_H     = 56       -- was 46
+local DROPDOWN_H   = 36       -- was 46 (match ELEM_H)
+local SECTION_H    = 24
+local ACCORDION_H  = 34       -- was 28
+local PAD           = 12      -- was 10
+local GAP           = 8       -- was 7
+local CORNER_R      = 18      -- was 10 (panel)
+local CORNER_LG     = 14      -- accordion shell (new)
+local CORNER_SM     = 6       -- chip / control row inner
+local CORNER_MD     = 10      -- control row (new)
+local STRIPE_W      = 3
+local MAX_PANEL_CONTENT = 720
+local FONT          = Enum.Font.Gotham
+local FONT_BOLD     = Enum.Font.GothamBold
+local FONT_SEMI     = Enum.Font.GothamSemibold
+local FONT_MONO     = Enum.Font.Code            -- substitute for JetBrains Mono
+local FSIZE         = 13      -- was 12 (body)
+local FSIZE_TITLE   = 14      -- was 13
+local FSIZE_SECTION = 11      -- accordion uppercase label (new)
+local FSIZE_VALUE   = 12      -- dropdown value (new)
+local FSIZE_SMALL   = 11
+local FSIZE_MONO    = 11      -- keybind / slider value (new)
 
 ---------- STATE ----------
 local screenGui, panelContainer, notifContainer
@@ -699,78 +632,80 @@ function XiroLib:CreateWindow(config)
         panelCount = panelCount + 1
         local panelIndex = panelCount
 
-        -- Panel (CanvasGroup — faked glass via BackgroundTransparency, no real backdrop-filter)
+        -- Panel (CanvasGroup enables single-property fade via GroupTransparency)
+        -- Glass effect: BackgroundTransparency 0.20 fakes backdrop-filter blur.
         local panel = Instance.new("CanvasGroup")
         panel.Name = "Panel_" .. tabName
-        panel.Size = UDim2.new(0, L.PANEL_W, 0, L.TITLE_H + 200)
-        panel.Position = UDim2.new(0, L.SP4 + (panelIndex - 1) * (L.PANEL_W + L.SP3), 0, 50)
+        panel.Size = UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
+        panel.Position = UDim2.new(0, 15 + (panelIndex - 1) * (PANEL_W + 12), 0, 50)
         panel.BackgroundColor3 = C.Panel
-        panel.BackgroundTransparency = A.PanelGlass     -- faked glass
+        panel.BackgroundTransparency = A.PanelGlass
         panel.BorderSizePixel = 0
         panel.ClipsDescendants = false
         panel.GroupTransparency = 0
         panel.Parent = panelContainer
-        addCorner(panel, L.R_XL)
-        local panelStroke = addStroke(panel, 1, C.BorderHair)
-        panelStroke.Transparency = A.BorderSoft         -- white-soft stroke replaces dark Border
+        addCorner(panel, CORNER_R)
+        local _panelStroke = addStroke(panel, 1, C.BorderHair)
+        _panelStroke.Transparency = A.BorderSoft
 
         -- Title bar
         local titleBar = Instance.new("Frame")
         titleBar.Name = "TitleBar"
-        titleBar.Size = UDim2.new(1, 0, 0, L.TITLE_H)
+        titleBar.Size = UDim2.new(1, 0, 0, TITLE_H)
         titleBar.BackgroundColor3 = C.TitleBar
         titleBar.BorderSizePixel = 0
         titleBar.Parent = panel
-        addCorner(titleBar, L.R_XL)
+        addCorner(titleBar, CORNER_R)
 
-        -- Vertical gradient (top brighter)
-        local tbGrad = Instance.new("UIGradient")
-        tbGrad.Rotation = 90
-        tbGrad.Color = ColorSequence.new({
+        -- Vertical gradient on titlebar (top brighter)
+        local _tbGrad = Instance.new("UIGradient")
+        _tbGrad.Rotation = 90
+        _tbGrad.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, C.TitleBar),
             ColorSequenceKeypoint.new(1, C.TitleBarEnd),
         })
-        tbGrad.Parent = titleBar
+        _tbGrad.Parent = titleBar
 
         -- Fix bottom corners of title bar (fill gap)
         local titleFill = Instance.new("Frame")
-        titleFill.Size = UDim2.new(1, 0, 0, L.R_XL)
-        titleFill.Position = UDim2.new(0, 0, 1, -L.R_XL)
+        titleFill.Size = UDim2.new(1, 0, 0, CORNER_R)
+        titleFill.Position = UDim2.new(0, 0, 1, -CORNER_R)
         titleFill.BackgroundColor3 = C.TitleBarEnd
         titleFill.BorderSizePixel = 0
         titleFill.Parent = titleBar
 
-        -- Accent dot (7px purple with outer glow)
+        -- Accent dot at left
         local titleDot = Instance.new("Frame")
         titleDot.Size = UDim2.new(0, 7, 0, 7)
-        titleDot.Position = UDim2.new(0, L.SP4, 0.5, -3)
+        titleDot.Position = UDim2.new(0, 14, 0.5, -4)
         titleDot.BackgroundColor3 = C.Accent
         titleDot.BorderSizePixel = 0
         titleDot.Parent = titleBar
         addCorner(titleDot, 4)
-        local dotGlow = Instance.new("UIStroke")
-        dotGlow.Color = C.AccentGlow
-        dotGlow.Thickness = 2
-        dotGlow.Transparency = A.AccentGlow
-        dotGlow.Parent = titleDot
+        local _dotGlow = Instance.new("UIStroke")
+        _dotGlow.Color = C.AccentGlow
+        _dotGlow.Thickness = 2
+        _dotGlow.Transparency = A.AccentGlow
+        _dotGlow.Parent = titleDot
 
-        -- Hairline divider under titlebar
-        local titleDivider = Instance.new("Frame")
-        titleDivider.Size = UDim2.new(1, 0, 0, 1)
-        titleDivider.Position = UDim2.new(0, 0, 1, 0)
-        titleDivider.BackgroundColor3 = C.BorderHair
-        titleDivider.BackgroundTransparency = A.BorderHair
-        titleDivider.BorderSizePixel = 0
-        titleDivider.Parent = titleBar
+        -- Hairline divider below titlebar
+        local _titleDivider = Instance.new("Frame")
+        _titleDivider.Size = UDim2.new(1, 0, 0, 1)
+        _titleDivider.Position = UDim2.new(0, 0, 1, 0)
+        _titleDivider.BackgroundColor3 = C.BorderHair
+        _titleDivider.BackgroundTransparency = A.BorderHair
+        _titleDivider.BorderSizePixel = 0
+        _titleDivider.ZIndex = 2
+        _titleDivider.Parent = titleBar
 
         local titleLabel = Instance.new("TextLabel")
-        titleLabel.Size = UDim2.new(1, -54, 1, 0)
-        titleLabel.Position = UDim2.new(0, L.SP4 + 14, 0, 0)
+        titleLabel.Size = UDim2.new(1, -56, 1, 0)
+        titleLabel.Position = UDim2.new(0, 28, 0, 0)
         titleLabel.BackgroundTransparency = 1
         titleLabel.Text = tabName
         titleLabel.TextColor3 = C.Text
-        titleLabel.Font = L.FONT_SEMI
-        titleLabel.TextSize = L.FSIZE_TITLE
+        titleLabel.Font = FONT_SEMI
+        titleLabel.TextSize = FSIZE_TITLE
         titleLabel.TextXAlignment = Enum.TextXAlignment.Left
         titleLabel.Parent = titleBar
 
@@ -782,10 +717,10 @@ function XiroLib:CreateWindow(config)
         minBtn.Size = UDim2.new(0, 28, 0, TITLE_H)
         minBtn.Position = UDim2.new(1, -28, 0, 0)
         minBtn.BackgroundTransparency = 1
-        minBtn.Text = "▼"
+        minBtn.Text = "−"
         minBtn.TextColor3 = C.SubText
-        minBtn.Font = FONT
-        minBtn.TextSize = 10
+        minBtn.Font = FONT_BOLD
+        minBtn.TextSize = 14
         minBtn.Rotation = 0
         minBtn.Parent = titleBar
 
@@ -827,14 +762,14 @@ function XiroLib:CreateWindow(config)
             minimized = not minimized
             if minimized then
                 expandedSize = panel.Size
-                tw(minBtn, {Rotation = -90}, 0.18)
+                minBtn.Text = "+"
                 setResizeSuppress(true)
                 tw(panel, {Size = UDim2.new(0, PANEL_W, 0, TITLE_H)}, 0.18)
                 task.delay(0.18, function()
                     if minimized then scrollFrame.Visible = false end
                 end)
             else
-                tw(minBtn, {Rotation = 0}, 0.18)
+                minBtn.Text = "−"
                 scrollFrame.Visible = true
                 local target = expandedSize or UDim2.new(0, PANEL_W, 0, TITLE_H + 200)
                 setResizeSuppress(true)
@@ -881,78 +816,65 @@ function XiroLib:CreateWindow(config)
             containerLayout.Padding = UDim.new(0, GAP)
             containerLayout.Parent = container
 
-            -- Header row (Surface1 card; top-highlight gradient)
+            -- Header row
             local header = Instance.new("Frame")
             header.Name = "Header"
-            header.Size = UDim2.new(1, 0, 0, L.ACCORDION_H)
+            header.Size = UDim2.new(1, 0, 0, ACCORDION_H)
             header.BackgroundColor3 = C.Surface1
             header.BorderSizePixel = 0
             header.LayoutOrder = 0
             header.Parent = container
-            addCorner(header, L.R_LG)
+            addCorner(header, CORNER_LG)
             local headerStroke = Instance.new("UIStroke")
             headerStroke.Thickness = 1
             headerStroke.Color = C.BorderHair
             headerStroke.Transparency = A.BorderHair
             headerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             headerStroke.Parent = header
-            -- Top-highlight gradient (bright at top, transparent below)
+            -- Top highlight only (no full gradient — keeps card flat)
             local headerGradient = Instance.new("UIGradient")
+            headerGradient.Rotation = 90
             headerGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
             headerGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.92),
-                NumberSequenceKeypoint.new(0.4, 1),
-                NumberSequenceKeypoint.new(1, 1),
+                NumberSequenceKeypoint.new(0,    0.92),
+                NumberSequenceKeypoint.new(0.45, 1),
+                NumberSequenceKeypoint.new(1,    1),
             })
-            headerGradient.Rotation = 90
             headerGradient.Parent = header
 
             local arrow = Instance.new("TextLabel")
-            arrow.Size = UDim2.new(0, 20, 1, 0)
-            arrow.Position = UDim2.new(0, 6, 0, 0)
+            arrow.Size = UDim2.new(0, 18, 1, 0)
+            arrow.Position = UDim2.new(0, 8, 0, 0)
             arrow.BackgroundTransparency = 1
             arrow.Text = "▶"
             arrow.TextColor3 = C.Accent
-            arrow.Font = L.FONT
+            arrow.Font = FONT_BOLD
             arrow.TextSize = 9
             arrow.Rotation = 0
             arrow.Parent = header
 
             local headerLabel = Instance.new("TextLabel")
-            headerLabel.Size = UDim2.new(1, -90, 1, 0)              -- leave room for count badge
-            headerLabel.Position = UDim2.new(0, 24, 0, 0)
+            headerLabel.Size = UDim2.new(1, -36, 1, 0)
+            headerLabel.Position = UDim2.new(0, 28, 0, 0)
             headerLabel.BackgroundTransparency = 1
             headerLabel.Text = string.upper(accordionName or "Section")
             headerLabel.TextColor3 = C.SubText
-            headerLabel.Font = L.FONT_BOLD
-            headerLabel.TextSize = L.FSIZE_SECTION
+            headerLabel.Font = FONT_BOLD
+            headerLabel.TextSize = FSIZE_SECTION
             headerLabel.TextXAlignment = Enum.TextXAlignment.Left
             headerLabel.Parent = header
 
-            -- Count badge (right side)
-            local countBadge = Instance.new("TextLabel")
-            countBadge.Size = UDim2.new(0, 28, 0, 18)
-            countBadge.Position = UDim2.new(1, -36, 0.5, -9)
-            countBadge.BackgroundColor3 = C.Elem
-            countBadge.BackgroundTransparency = 0
-            countBadge.Text = "0"
-            countBadge.TextColor3 = C.Muted
-            countBadge.Font = L.FONT_MONO
-            countBadge.TextSize = L.FSIZE_CAPTION
-            countBadge.Parent = header
-            addCorner(countBadge, L.R_XS)
-
-            -- Content frame (nested deeper than the header card)
+            -- Content frame (holds child elements, always present but clipped)
             local content = Instance.new("Frame")
             content.Name = "Content"
             content.AutomaticSize = Enum.AutomaticSize.Y
             content.Size = UDim2.new(1, 0, 0, 0)
             content.BackgroundColor3 = C.Surface0
-            content.BackgroundTransparency = 0.2
+            content.BackgroundTransparency = 0.15
             content.Visible = true
             content.LayoutOrder = 1
             content.Parent = container
-            addCorner(content, L.R_SM)
+            addCorner(content, CORNER_LG)
 
             -- Tight padding: minimize wasted edge gaps
             local contentPadding = Instance.new("UIPadding")
@@ -1003,9 +925,9 @@ function XiroLib:CreateWindow(config)
                 if isExpanded or animating then return end
                 isExpanded = true
                 animating = true
-                tw(arrow, {Rotation = 90}, 0.18)
-                TS:Create(headerLabel, TWEEN.Fast, {TextColor3 = C.AccentText}):Play()
-                TS:Create(header, TWEEN.Fast, {BackgroundColor3 = C.Surface1}):Play()
+                tw(arrow, {Rotation = 90}, 0.20)
+                tw(headerLabel, {TextColor3 = C.AccentText}, 0.20)
+                tw(header, {BackgroundColor3 = C.Surface1}, 0.20)
                 local contentH = contentInnerLayout.AbsoluteContentSize.Y
                 local targetH = math.floor(ACCORDION_H + GAP + contentH + 0.5)
                 for _, d in content:GetDescendants() do
@@ -1024,9 +946,9 @@ function XiroLib:CreateWindow(config)
                 if not isExpanded or animating then return end
                 isExpanded = false
                 animating = true
-                tw(arrow, {Rotation = 0}, 0.18)
-                TS:Create(headerLabel, TWEEN.Fast, {TextColor3 = C.SubText}):Play()
-                TS:Create(header, TWEEN.Fast, {BackgroundColor3 = C.Surface1}):Play()
+                tw(arrow, {Rotation = 0}, 0.20)
+                tw(headerLabel, {TextColor3 = C.SubText}, 0.20)
+                tw(header, {BackgroundColor3 = C.Surface1}, 0.20)
                 container.ClipsDescendants = true
                 animateContainerHeight(ACCORDION_H, 0.2, function()
                     animating = false
@@ -1128,7 +1050,7 @@ function XiroLib:CreateWindow(config)
                 tw(header, {BackgroundColor3 = C.ElemHover}, 0.20)
             end)
             headerBtn.MouseLeave:Connect(function()
-                tw(header, {BackgroundColor3 = isExpanded and C.Elem or C.TitleBar}, 0.20)
+                tw(header, {BackgroundColor3 = C.Surface1}, 0.20)
             end)
 
             -- Accordion child API (mirrors Tab API, parents into content frame)
@@ -1136,7 +1058,6 @@ function XiroLib:CreateWindow(config)
             local accOrder = 0
             local function accNextOrder()
                 accOrder = accOrder + 1
-                countBadge.Text = tostring(accOrder)
                 return accOrder
             end
 
@@ -1162,31 +1083,33 @@ function XiroLib:CreateWindow(config)
                 local frame = Instance.new("Frame")
                 frame.Name = "Toggle_" .. (cfg.Name or "")
                 frame.Size = UDim2.new(1, 0, 0, subH)
-                frame.BackgroundColor3 = isSub and C.Panel or C.Elem  -- subtler tint
-                frame.BackgroundTransparency = isSub and 0.3 or 0
+                frame.BackgroundColor3 = isSub and C.Surface1 or C.Elem
+                frame.BackgroundTransparency = isSub and 0.4 or 0
                 frame.BorderSizePixel = 0
                 frame.LayoutOrder = accNextOrder()
                 frame.Parent = content
-                addCorner(frame, L.R_MD)
-                if not isSub then addStroke(frame, 1, C.Border) end  -- no border on subs
+                addCorner(frame, CORNER_MD)
+                if not isSub then
+                    local _fs = addStroke(frame, 1, C.BorderHair)
+                    _fs.Transparency = A.BorderSoft
+                end
 
                 local stripe = Instance.new("Frame")
-                stripe.Size = UDim2.new(0, 3, 1, -10)
+                stripe.Size = UDim2.new(0, STRIPE_W, 1, -10)
                 stripe.Position = UDim2.new(0, 0, 0, 5)
                 stripe.BackgroundColor3 = C.Accent
                 stripe.BackgroundTransparency = enabled and 0 or 1
                 stripe.BorderSizePixel = 0
                 stripe.Parent = frame
                 addCorner(stripe, 2)
-                -- gradient stripe (vertical): brighter at top → accent → deep
-                local stripeGrad = Instance.new("UIGradient")
-                stripeGrad.Rotation = 90
-                stripeGrad.Color = ColorSequence.new({
+                local _stripeGrad = Instance.new("UIGradient")
+                _stripeGrad.Rotation = 90
+                _stripeGrad.Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0,   C.AccentText),
                     ColorSequenceKeypoint.new(0.5, C.Accent),
                     ColorSequenceKeypoint.new(1,   C.AccentDark),
                 })
-                stripeGrad.Parent = stripe
+                _stripeGrad.Parent = stripe
 
                 local function startPulse() pulseAdd(stripe) end
                 local function stopPulse() pulseRemove(stripe) end
@@ -1221,10 +1144,20 @@ function XiroLib:CreateWindow(config)
                 indicator.Parent = frame
                 addCorner(indicator, math.floor(subIndH/2))
                 local indicatorStroke = Instance.new("UIStroke")
-                indicatorStroke.Thickness = 1
-                indicatorStroke.Color = enabled and C.ToggleOn or C.Border
-                indicatorStroke.Transparency = enabled and 0.2 or 0
+                indicatorStroke.Thickness = enabled and 2 or 1
+                indicatorStroke.Color = enabled and C.AccentGlow or C.BorderHair
+                indicatorStroke.Transparency = enabled and A.AccentGlow or A.BorderSoft
                 indicatorStroke.Parent = indicator
+                -- Gradient on indicator when ON (created lazily in updateVisual)
+                local indicatorGrad = Instance.new("UIGradient")
+                indicatorGrad.Rotation = 135
+                indicatorGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0,   C.AccentText),
+                    ColorSequenceKeypoint.new(0.5, C.Accent),
+                    ColorSequenceKeypoint.new(1,   C.AccentDark),
+                })
+                indicatorGrad.Enabled = enabled
+                indicatorGrad.Parent = indicator
 
                 local dot = Instance.new("Frame")
                 dot.Size = UDim2.new(0, subDotBase, 0, subDotBase)
@@ -1234,51 +1167,32 @@ function XiroLib:CreateWindow(config)
                 dot.Parent = indicator
                 addCorner(dot, math.floor(subDotBase/2))
 
+                -- Pre-compute the accent-tinted row bg for ON state (top-level only)
+                local _rowOn = Color3.new(
+                    C.Elem.R * 0.86 + C.Accent.R * 0.14,
+                    C.Elem.G * 0.86 + C.Accent.G * 0.14,
+                    C.Elem.B * 0.86 + C.Accent.B * 0.14
+                )
+
                 local function updateVisual()
-                    -- Pill background + dot slide
-                    TS:Create(indicator, TWEEN.Base, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}):Play()
-                    TS:Create(dot,       TWEEN.Base, {Position         = enabled and _dotOnPos or _dotOffPos}):Play()
-
-                    -- Gradient pill when ON (created lazily, destroyed when OFF)
-                    local pillGrad = indicator:FindFirstChildOfClass("UIGradient")
-                    if enabled and not pillGrad then
-                        pillGrad = Instance.new("UIGradient")
-                        pillGrad.Rotation = 135
-                        pillGrad.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0,   C.AccentText),
-                            ColorSequenceKeypoint.new(0.5, C.Accent),
-                            ColorSequenceKeypoint.new(1,   C.AccentDark),
-                        })
-                        pillGrad.Parent = indicator
-                    elseif (not enabled) and pillGrad then
-                        pillGrad:Destroy()
-                    end
-
-                    -- Outer glow stroke
+                    tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.20)
+                    tw(dot, {Position = enabled and _dotOnPos or _dotOffPos}, 0.20)
+                    indicatorGrad.Enabled = enabled
                     pcall(function()
                         indicatorStroke.Color = enabled and C.AccentGlow or C.BorderHair
-                        TS:Create(indicatorStroke, TWEEN.Base, {
+                        tw(indicatorStroke, {
                             Transparency = enabled and A.AccentGlow or A.BorderSoft,
                             Thickness    = enabled and 2 or 1,
-                        }):Play()
+                        }, 0.20)
                     end)
-
-                    -- Row wash when ON (only for top-level, not sub)
                     if not isSub then
-                        TS:Create(frame, TWEEN.Base, {
-                            BackgroundColor3 = enabled and Color3.new(
-                                C.Elem.R * 0.85 + C.Accent.R * 0.15,
-                                C.Elem.G * 0.85 + C.Accent.G * 0.15,
-                                C.Elem.B * 0.85 + C.Accent.B * 0.15
-                            ) or C.Elem,
-                        }):Play()
+                        tw(frame, {BackgroundColor3 = enabled and _rowOn or C.Elem}, 0.20)
                     end
-
                     if enabled then
                         startPulse()
                     else
                         stopPulse()
-                        tw(stripe, {BackgroundTransparency = 1}, 0.18)
+                        tw(stripe, {BackgroundTransparency = 1}, 0.20)
                     end
                 end
 
@@ -1320,7 +1234,13 @@ function XiroLib:CreateWindow(config)
                 end)
 
                 btn.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.20) end)
-                btn.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.20) end)
+                btn.MouseLeave:Connect(function()
+                    if isSub then
+                        tw(frame, {BackgroundColor3 = C.Surface1}, 0.20)
+                    else
+                        tw(frame, {BackgroundColor3 = enabled and _rowOn or C.Elem}, 0.20)
+                    end
+                end)
 
                 function toggleObj:Set(val)
                     if type(val) == "boolean" then
@@ -1372,12 +1292,13 @@ function XiroLib:CreateWindow(config)
                 frame.BorderSizePixel = 0
                 frame.LayoutOrder = accNextOrder()
                 frame.Parent = content
-                addCorner(frame, CORNER_SM)
-                addStroke(frame, 1, C.Border)
+                addCorner(frame, CORNER_MD)
+                local _sfs = addStroke(frame, 1, C.BorderHair)
+                _sfs.Transparency = A.BorderSoft
 
                 local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(0.65, -10, 0, 18)
-                label.Position = UDim2.new(0, 10, 0, 4)
+                label.Size = UDim2.new(1, -78, 0, 18)
+                label.Position = UDim2.new(0, 12, 0, 6)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Slider"
                 label.TextColor3 = C.Text
@@ -1387,24 +1308,22 @@ function XiroLib:CreateWindow(config)
                 label.TextTruncate = Enum.TextTruncate.AtEnd
                 label.Parent = frame
 
-                -- value chip (mono, accent-soft bg)
                 local valLabel = Instance.new("TextLabel")
-                valLabel.Size = UDim2.new(0, 56, 0, 18)
-                valLabel.Position = UDim2.new(1, -66, 0, 6)
-                valLabel.AnchorPoint = Vector2.new(0, 0)
+                valLabel.Size = UDim2.new(0, 56, 0, 20)
+                valLabel.Position = UDim2.new(1, -68, 0, 5)
                 valLabel.BackgroundColor3 = C.AccentSoft
                 valLabel.BackgroundTransparency = A.AccentSoft
                 valLabel.Text = tostring(value) .. suffix
                 valLabel.TextColor3 = C.AccentText
-                valLabel.Font = L.FONT_MONO
-                valLabel.TextSize = L.FSIZE_MONO
+                valLabel.Font = FONT_MONO
+                valLabel.TextSize = FSIZE_MONO
                 valLabel.TextXAlignment = Enum.TextXAlignment.Center
                 valLabel.Parent = frame
-                addCorner(valLabel, L.R_SM)
+                addCorner(valLabel, CORNER_SM)
 
                 local barBG = Instance.new("Frame")
-                barBG.Size = UDim2.new(1, -20, 0, L.SLIDER_TRACK_H)
-                barBG.Position = UDim2.new(0, 10, 0, 28)
+                barBG.Size = UDim2.new(1, -24, 0, 6)
+                barBG.Position = UDim2.new(0, 12, 0, 34)
                 barBG.BackgroundColor3 = C.SliderBG
                 barBG.BorderSizePixel = 0
                 barBG.Parent = frame
@@ -1412,7 +1331,7 @@ function XiroLib:CreateWindow(config)
 
                 local barFill = Instance.new("Frame")
                 barFill.Size = UDim2.new((value - mn) / (mx - mn), 0, 1, 0)
-                barFill.BackgroundColor3 = C.SliderFill
+                barFill.BackgroundColor3 = C.Accent
                 barFill.BorderSizePixel = 0
                 barFill.Parent = barBG
                 addCorner(barFill, 3)
@@ -1429,16 +1348,27 @@ function XiroLib:CreateWindow(config)
                 fillGlow.Transparency = A.AccentGlow
                 fillGlow.Parent = barFill
 
-                -- thumb (white circle with accent ring)
+                -- Thumb: white circle w/ accent ring + glow halo (halo = parent frame)
+                local thumbHalo = Instance.new("Frame")
+                thumbHalo.Size = UDim2.new(0, 22, 0, 22)
+                thumbHalo.AnchorPoint = Vector2.new(0.5, 0.5)
+                thumbHalo.Position = UDim2.new((value - mn) / math.max(mx - mn, 0.001), 0, 0.5, 0)
+                thumbHalo.BackgroundColor3 = C.Accent
+                thumbHalo.BackgroundTransparency = 0.7
+                thumbHalo.BorderSizePixel = 0
+                thumbHalo.ZIndex = 2
+                thumbHalo.Parent = barBG
+                addCorner(thumbHalo, 11)
+
                 local thumb = Instance.new("Frame")
-                thumb.Size = UDim2.new(0, L.SLIDER_THUMB, 0, L.SLIDER_THUMB)
+                thumb.Size = UDim2.new(0, 12, 0, 12)
                 thumb.AnchorPoint = Vector2.new(0.5, 0.5)
-                thumb.Position = UDim2.new((value - mn) / math.max(mx - mn, 0.001), 0, 0.5, 0)
+                thumb.Position = UDim2.new(0.5, 0, 0.5, 0)
                 thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 thumb.BorderSizePixel = 0
-                thumb.ZIndex = 2
-                thumb.Parent = barBG
-                addCorner(thumb, math.floor(L.SLIDER_THUMB / 2))
+                thumb.ZIndex = 3
+                thumb.Parent = thumbHalo
+                addCorner(thumb, 6)
                 local thumbRing = Instance.new("UIStroke")
                 thumbRing.Color = C.Accent
                 thumbRing.Thickness = 2
@@ -1465,10 +1395,12 @@ function XiroLib:CreateWindow(config)
                 end
 
                 local _slTw = nil
+                local _thumbTw = nil
                 local function slideTo(pct, dur)
                     if _slTw then pcall(function() _slTw:Cancel() end) end
+                    if _thumbTw then pcall(function() _thumbTw:Cancel() end) end
                     _slTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, dur)
-                    TS:Create(thumb, TWEEN.Base, {Position = UDim2.new(pct, 0, 0.5, 0)}):Play()
+                    _thumbTw = tw(thumbHalo, {Position = UDim2.new(pct, 0, 0.5, 0)}, dur)
                 end
 
                 local function updateSlider(newVal)
@@ -1518,14 +1450,8 @@ function XiroLib:CreateWindow(config)
                     commitValue(snapped)
                 end)
 
-                frame.MouseEnter:Connect(function()
-                    tw(frame, {BackgroundColor3 = C.ElemHover}, 0.20)
-                    TS:Create(thumb, TWEEN.Base, {Size = UDim2.new(0, L.SLIDER_THUMB + 2, 0, L.SLIDER_THUMB + 2)}):Play()
-                end)
-                frame.MouseLeave:Connect(function()
-                    tw(frame, {BackgroundColor3 = C.Elem}, 0.20)
-                    TS:Create(thumb, TWEEN.Base, {Size = UDim2.new(0, L.SLIDER_THUMB, 0, L.SLIDER_THUMB)}):Play()
-                end)
+                frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.20) end)
+                frame.MouseLeave:Connect(function() tw(frame, {BackgroundColor3 = C.Elem}, 0.20) end)
 
                 local sliderObj = {}
                 sliderObj.CurrentValue = value
@@ -1564,8 +1490,8 @@ function XiroLib:CreateWindow(config)
                 mainRow.BorderSizePixel = 0
                 mainRow.LayoutOrder = 0
                 mainRow.Parent = ddContainer
-                addCorner(mainRow, CORNER_SM)
-                addStroke(mainRow, 1, C.Border)
+                addCorner(mainRow, CORNER_MD)
+                do local _mrs = addStroke(mainRow, 1, C.BorderHair); _mrs.Transparency = A.BorderSoft end
 
                 local nameLabel = Instance.new("TextLabel")
                 nameLabel.Size = UDim2.new(1, -32, 0, 18)
@@ -1586,7 +1512,7 @@ function XiroLib:CreateWindow(config)
                 valueLabel.Text = table.concat(current, ", ")
                 valueLabel.TextColor3 = C.AccentText
                 valueLabel.Font = FONT_SEMI
-                valueLabel.TextSize = L.FSIZE_VALUE
+                valueLabel.TextSize = FSIZE
                 valueLabel.TextXAlignment = Enum.TextXAlignment.Left
                 valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
                 valueLabel.Parent = mainRow
@@ -1642,25 +1568,32 @@ function XiroLib:CreateWindow(config)
                     for i, opt in ipairs(options) do
                         local isSelected = table.find(current, opt) ~= nil
                         local optBtn = Instance.new("TextButton")
-                        optBtn.Size = UDim2.new(1, 0, 0, 26)
-                        optBtn.BackgroundColor3 = isSelected and C.AccentSoft or C.Surface1
-                        optBtn.BackgroundTransparency = isSelected and A.AccentSoft or 0
+                        optBtn.Size = UDim2.new(1, 0, 0, 24)
+                        optBtn.BackgroundColor3 = isSelected and C.AccentSoft or C.Elem
                         optBtn.BorderSizePixel = 0
                         optBtn.Text = (isSelected and "● " or "   ") .. opt
                         optBtn.TextColor3 = isSelected and C.AccentText or C.SubText
-                        optBtn.Font = L.FONT
-                        optBtn.TextSize = L.FSIZE_VALUE
+                        optBtn.Font = FONT
+                        optBtn.TextSize = FSIZE_SMALL
                         optBtn.TextXAlignment = Enum.TextXAlignment.Left
                         optBtn.LayoutOrder = i
                         optBtn.Parent = optContainer
-                        addCorner(optBtn, L.R_SM)
+                        addCorner(optBtn, CORNER_SM)
+                        if isSelected then
+                            local sel = Instance.new("Frame")
+                            sel.Size = UDim2.new(0, 3, 0.7, 0)
+                            sel.Position = UDim2.new(0, 0, 0.15, 0)
+                            sel.BackgroundColor3 = C.Accent
+                            sel.BorderSizePixel = 0
+                            sel.Parent = optBtn
+                            addCorner(sel, 1)
+                        end
 
                         optBtn.MouseEnter:Connect(function()
-                            if not table.find(current, opt) then tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.20) end
+                            if not table.find(current, opt) then tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.08) end
                         end)
                         optBtn.MouseLeave:Connect(function()
-                            local stillSel = table.find(current, opt) ~= nil
-                            tw(optBtn, {BackgroundColor3 = stillSel and C.AccentSoft or C.Surface1}, 0.20)
+                            tw(optBtn, {BackgroundColor3 = (table.find(current, opt) ~= nil) and C.AccentSoft or C.Elem}, 0.08)
                         end)
                         optBtn.MouseButton1Click:Connect(function()
                             if multi then
@@ -1755,39 +1688,22 @@ function XiroLib:CreateWindow(config)
 
             function Acc:CreateButton(cfg)
                 cfg = cfg or {}
-                local isPrimary = cfg.Variant == "primary"
                 local frame = Instance.new("Frame")
                 frame.Name = "Button_" .. (cfg.Name or "")
                 frame.Size = UDim2.new(1, 0, 0, ELEM_H)
-                frame.BackgroundColor3 = isPrimary and C.Accent or C.Elem
+                frame.BackgroundColor3 = C.Elem
                 frame.BorderSizePixel = 0
                 frame.LayoutOrder = accNextOrder()
                 frame.Parent = content
-                addCorner(frame, L.R_MD)
-                if isPrimary then
-                    local btnGrad = Instance.new("UIGradient")
-                    btnGrad.Rotation = 135
-                    btnGrad.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0,   C.AccentText),
-                        ColorSequenceKeypoint.new(0.5, C.Accent),
-                        ColorSequenceKeypoint.new(1,   C.AccentDark),
-                    })
-                    btnGrad.Parent = frame
-                    local btnGlow = Instance.new("UIStroke")
-                    btnGlow.Color = C.AccentGlow
-                    btnGlow.Thickness = 2
-                    btnGlow.Transparency = A.AccentGlow
-                    btnGlow.Parent = frame
-                else
-                    addStroke(frame, 1, C.Border)
-                end
+                addCorner(frame, CORNER_SM)
+                addStroke(frame, 1, C.Border)
 
                 local label = Instance.new("TextLabel")
                 label.Size = UDim2.new(1, -20, 1, 0)
                 label.Position = UDim2.new(0, 10, 0, 0)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Button"
-                label.TextColor3 = isPrimary and Color3.fromRGB(255,255,255) or C.AccentText
+                label.TextColor3 = C.Accent
                 label.Font = FONT_SEMI
                 label.TextSize = FSIZE
                 label.TextXAlignment = Enum.TextXAlignment.Left
@@ -1882,11 +1798,13 @@ function XiroLib:CreateWindow(config)
                 frame.BorderSizePixel = 0
                 frame.LayoutOrder = accNextOrder()
                 frame.Parent = content
-                addCorner(frame, CORNER_SM)
+                addCorner(frame, CORNER_MD)
+                local _kbs = addStroke(frame, 1, C.BorderHair)
+                _kbs.Transparency = A.BorderSoft
 
                 local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, -80, 1, 0)
-                label.Position = UDim2.new(0, 10, 0, 0)
+                label.Size = UDim2.new(1, -86, 1, 0)
+                label.Position = UDim2.new(0, 12, 0, 0)
                 label.BackgroundTransparency = 1
                 label.Text = cfg.Name or "Keybind"
                 label.TextColor3 = C.Text
@@ -1896,32 +1814,30 @@ function XiroLib:CreateWindow(config)
                 label.Parent = frame
 
                 local keyLabel = Instance.new("TextLabel")
-                keyLabel.Size = UDim2.new(0, L.KEYCHIP_W, 0, L.KEYCHIP_H)
-                keyLabel.Position = UDim2.new(1, -(L.KEYCHIP_W + L.SP2), 0.5, -L.KEYCHIP_H / 2)
+                keyLabel.Size = UDim2.new(0, 66, 0, 22)
+                keyLabel.Position = UDim2.new(1, -76, 0.5, -11)
                 keyLabel.BackgroundColor3 = C.SliderBG
                 keyLabel.BorderSizePixel = 0
                 keyLabel.Text = currentKey
                 keyLabel.TextColor3 = C.AccentText
-                keyLabel.Font = L.FONT_MONO
-                keyLabel.TextSize = L.FSIZE_MONO
+                keyLabel.Font = FONT_MONO
+                keyLabel.TextSize = FSIZE_MONO
                 keyLabel.Parent = frame
-                addCorner(keyLabel, L.R_SM)
-
+                addCorner(keyLabel, CORNER_SM)
                 local keyStroke = Instance.new("UIStroke")
-                keyStroke.Color = C.BorderStrong
-                keyStroke.Transparency = A.BorderStrong
+                keyStroke.Color = C.BorderHair
+                keyStroke.Transparency = A.BorderSoft
                 keyStroke.Thickness = 1
                 keyStroke.Parent = keyLabel
-
-                -- inset shadow (bottom dark line)
-                local keyInset = Instance.new("Frame")
-                keyInset.Size = UDim2.new(1, -4, 0, 2)
-                keyInset.Position = UDim2.new(0, 2, 1, -3)
-                keyInset.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                keyInset.BackgroundTransparency = 0.65
-                keyInset.BorderSizePixel = 0
-                keyInset.ZIndex = 2
-                keyInset.Parent = keyLabel
+                -- inset shadow at bottom for "pressed" key feel
+                local _keyInset = Instance.new("Frame")
+                _keyInset.Size = UDim2.new(1, -4, 0, 2)
+                _keyInset.Position = UDim2.new(0, 2, 1, -3)
+                _keyInset.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                _keyInset.BackgroundTransparency = 0.65
+                _keyInset.BorderSizePixel = 0
+                _keyInset.ZIndex = 2
+                _keyInset.Parent = keyLabel
 
                 local btn = Instance.new("TextButton")
                 btn.Size = UDim2.new(1, 0, 1, 0)
@@ -1929,31 +1845,30 @@ function XiroLib:CreateWindow(config)
                 btn.Text = ""
                 btn.Parent = frame
 
-                local _keyPulseTw = nil
                 local captureFn
                 captureFn = function(input)
                     listening = false
                     _STATE.keybindListener = nil
-                    if _keyPulseTw then pcall(function() _keyPulseTw:Cancel() end); _keyPulseTw = nil end
                     currentKey = input.KeyCode.Name
                     keyLabel.Text = currentKey
-                    keyStroke.Color = C.BorderStrong
-                    keyStroke.Transparency = A.BorderStrong
-                    tw(keyLabel, {TextColor3 = C.AccentText, BackgroundColor3 = C.SliderBG}, 0.2)
+                    tw(keyLabel, {TextColor3 = C.AccentText, BackgroundColor3 = C.SliderBG}, 0.20)
+                    keyStroke.Color = C.BorderHair
+                    tw(keyStroke, {Transparency = A.BorderSoft, Thickness = 1}, 0.20)
                     if flag then updateFlag(flag, currentKey) end
                     if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
                 end
 
                 btn.MouseButton1Click:Connect(function()
                     listening = true
-                    keyLabel.Text = "…"
-                    TS:Create(keyLabel, TWEEN.Fast, {
-                        TextColor3       = C.AccentText,
-                        BackgroundColor3 = C.AccentSoft,
-                    }):Play()
+                    keyLabel.Text = "..."
+                    tw(keyLabel, {BackgroundColor3 = C.AccentSoft}, 0.15)
+                    keyLabel.BackgroundTransparency = A.AccentSoft
                     keyStroke.Color = C.AccentEdge
-                    _keyPulseTw = TS:Create(keyStroke, TWEEN.KeyPulse, {Transparency = A.AccentGlow})
-                    _keyPulseTw:Play()
+                    -- looped reverse-sine pulse on the stroke transparency = "listening" glow
+                    TS:Create(keyStroke,
+                        TweenInfo.new(0.65, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                        {Transparency = A.AccentGlow, Thickness = 2}
+                    ):Play()
                     _STATE.keybindListener = captureFn
                 end)
 
@@ -2066,7 +1981,7 @@ function XiroLib:CreateWindow(config)
                     tLabel.Size = UDim2.new(1, 0, 0, 0)
                     tLabel.BackgroundTransparency = 1
                     tLabel.Text = title
-                    tLabel.TextColor3 = C.AccentText
+                    tLabel.TextColor3 = C.Accent
                     tLabel.Font = FONT_SEMI
                     tLabel.TextSize = FSIZE
                     tLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -2141,12 +2056,32 @@ function XiroLib:CreateWindow(config)
             frame.BorderSizePixel = 0
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
-            addCorner(frame, CORNER_SM)
-            addStroke(frame, 1, C.Border)
+            addCorner(frame, CORNER_MD)
+            local _fs = addStroke(frame, 1, C.BorderHair)
+            _fs.Transparency = A.BorderSoft
+
+            -- Active stripe (left side)
+            local stripe = Instance.new("Frame")
+            stripe.Size = UDim2.new(0, STRIPE_W, 1, -10)
+            stripe.Position = UDim2.new(0, 0, 0, 5)
+            stripe.BackgroundColor3 = C.Accent
+            stripe.BackgroundTransparency = enabled and 0 or 1
+            stripe.BorderSizePixel = 0
+            stripe.Parent = frame
+            addCorner(stripe, 2)
+            local _stripeGrad = Instance.new("UIGradient")
+            _stripeGrad.Rotation = 90
+            _stripeGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0,   C.AccentText),
+                ColorSequenceKeypoint.new(0.5, C.Accent),
+                ColorSequenceKeypoint.new(1,   C.AccentDark),
+            })
+            _stripeGrad.Parent = stripe
+            if enabled then pulseAdd(stripe) end
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, -48, 1, 0)
-            label.Position = UDim2.new(0, 10, 0, 0)
+            label.Position = UDim2.new(0, 14, 0, 0)
             label.BackgroundTransparency = 1
             label.Text = cfg.Name or "Toggle"
             label.TextColor3 = C.Text
@@ -2164,7 +2099,20 @@ function XiroLib:CreateWindow(config)
             indicator.BorderSizePixel = 0
             indicator.Parent = frame
             addCorner(indicator, 9)
-            addStroke(indicator, 1, C.Border)
+            local indicatorStroke = Instance.new("UIStroke")
+            indicatorStroke.Thickness = enabled and 2 or 1
+            indicatorStroke.Color = enabled and C.AccentGlow or C.BorderHair
+            indicatorStroke.Transparency = enabled and A.AccentGlow or A.BorderSoft
+            indicatorStroke.Parent = indicator
+            local indicatorGrad = Instance.new("UIGradient")
+            indicatorGrad.Rotation = 135
+            indicatorGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0,   C.AccentText),
+                ColorSequenceKeypoint.new(0.5, C.Accent),
+                ColorSequenceKeypoint.new(1,   C.AccentDark),
+            })
+            indicatorGrad.Enabled = enabled
+            indicatorGrad.Parent = indicator
 
             local dot = Instance.new("Frame")
             dot.Size = UDim2.new(0, 14, 0, 14)
@@ -2174,9 +2122,30 @@ function XiroLib:CreateWindow(config)
             dot.Parent = indicator
             addCorner(dot, 7)
 
+            local _rowOn = Color3.new(
+                C.Elem.R * 0.86 + C.Accent.R * 0.14,
+                C.Elem.G * 0.86 + C.Accent.G * 0.14,
+                C.Elem.B * 0.86 + C.Accent.B * 0.14
+            )
+
             local function updateVisual()
-                tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.15)
-                tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.15)
+                tw(indicator, {BackgroundColor3 = enabled and C.ToggleOn or C.ToggleOff}, 0.20)
+                tw(dot, {Position = enabled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)}, 0.20)
+                indicatorGrad.Enabled = enabled
+                pcall(function()
+                    indicatorStroke.Color = enabled and C.AccentGlow or C.BorderHair
+                    tw(indicatorStroke, {
+                        Transparency = enabled and A.AccentGlow or A.BorderSoft,
+                        Thickness    = enabled and 2 or 1,
+                    }, 0.20)
+                end)
+                tw(frame, {BackgroundColor3 = enabled and _rowOn or C.Elem}, 0.20)
+                if enabled then
+                    pulseAdd(stripe)
+                else
+                    pulseRemove(stripe)
+                    tw(stripe, {BackgroundTransparency = 1}, 0.20)
+                end
             end
 
             -- Click area
@@ -2209,7 +2178,7 @@ function XiroLib:CreateWindow(config)
                 tw(frame, {BackgroundColor3 = C.ElemHover}, 0.20)
             end)
             btn.MouseLeave:Connect(function()
-                tw(frame, {BackgroundColor3 = C.Elem}, 0.20)
+                tw(frame, {BackgroundColor3 = enabled and _rowOn or C.Elem}, 0.20)
             end)
 
             -- Toggle object
@@ -2253,13 +2222,14 @@ function XiroLib:CreateWindow(config)
             frame.BorderSizePixel = 0
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
-            addCorner(frame, CORNER_SM)
-            addStroke(frame, 1, C.Border)
+            addCorner(frame, CORNER_MD)
+            local _tsfs = addStroke(frame, 1, C.BorderHair)
+            _tsfs.Transparency = A.BorderSoft
 
             -- Top row: name + value
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.65, -10, 0, 18)
-            label.Position = UDim2.new(0, 10, 0, 4)
+            label.Size = UDim2.new(1, -78, 0, 18)
+            label.Position = UDim2.new(0, 12, 0, 6)
             label.BackgroundTransparency = 1
             label.Text = cfg.Name or "Slider"
             label.TextColor3 = C.Text
@@ -2270,20 +2240,22 @@ function XiroLib:CreateWindow(config)
             label.Parent = frame
 
             local valLabel = Instance.new("TextLabel")
-            valLabel.Size = UDim2.new(0.35, -10, 0, 18)
-            valLabel.Position = UDim2.new(0.65, 0, 0, 4)
-            valLabel.BackgroundTransparency = 1
+            valLabel.Size = UDim2.new(0, 56, 0, 20)
+            valLabel.Position = UDim2.new(1, -68, 0, 5)
+            valLabel.BackgroundColor3 = C.AccentSoft
+            valLabel.BackgroundTransparency = A.AccentSoft
             valLabel.Text = tostring(value) .. suffix
-            valLabel.TextColor3 = C.Accent
-            valLabel.Font = FONT_SEMI
-            valLabel.TextSize = FSIZE
-            valLabel.TextXAlignment = Enum.TextXAlignment.Right
+            valLabel.TextColor3 = C.AccentText
+            valLabel.Font = FONT_MONO
+            valLabel.TextSize = FSIZE_MONO
+            valLabel.TextXAlignment = Enum.TextXAlignment.Center
             valLabel.Parent = frame
+            addCorner(valLabel, CORNER_SM)
 
             -- Slider bar
             local barBG = Instance.new("Frame")
-            barBG.Size = UDim2.new(1, -20, 0, 6)
-            barBG.Position = UDim2.new(0, 10, 0, 28)
+            barBG.Size = UDim2.new(1, -24, 0, 6)
+            barBG.Position = UDim2.new(0, 12, 0, 34)
             barBG.BackgroundColor3 = C.SliderBG
             barBG.BorderSizePixel = 0
             barBG.Parent = frame
@@ -2291,10 +2263,49 @@ function XiroLib:CreateWindow(config)
 
             local barFill = Instance.new("Frame")
             barFill.Size = UDim2.new((value - mn) / (mx - mn), 0, 1, 0)
-            barFill.BackgroundColor3 = C.SliderFill
+            barFill.BackgroundColor3 = C.Accent
             barFill.BorderSizePixel = 0
             barFill.Parent = barBG
             addCorner(barFill, 3)
+            local fillGradient = Instance.new("UIGradient")
+            fillGradient.Rotation = 0
+            fillGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, C.AccentDark),
+                ColorSequenceKeypoint.new(1, C.Accent),
+            })
+            fillGradient.Parent = barFill
+            local fillGlow = Instance.new("UIStroke")
+            fillGlow.Color = C.AccentGlow
+            fillGlow.Thickness = 2
+            fillGlow.Transparency = A.AccentGlow
+            fillGlow.Parent = barFill
+
+            -- Thumb: white circle w/ accent ring + glow halo
+            local thumbHalo = Instance.new("Frame")
+            thumbHalo.Size = UDim2.new(0, 22, 0, 22)
+            thumbHalo.AnchorPoint = Vector2.new(0.5, 0.5)
+            thumbHalo.Position = UDim2.new((value - mn) / math.max(mx - mn, 0.001), 0, 0.5, 0)
+            thumbHalo.BackgroundColor3 = C.Accent
+            thumbHalo.BackgroundTransparency = 0.7
+            thumbHalo.BorderSizePixel = 0
+            thumbHalo.ZIndex = 2
+            thumbHalo.Parent = barBG
+            addCorner(thumbHalo, 11)
+
+            local thumb = Instance.new("Frame")
+            thumb.Size = UDim2.new(0, 12, 0, 12)
+            thumb.AnchorPoint = Vector2.new(0.5, 0.5)
+            thumb.Position = UDim2.new(0.5, 0, 0.5, 0)
+            thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            thumb.BorderSizePixel = 0
+            thumb.ZIndex = 3
+            thumb.Parent = thumbHalo
+            addCorner(thumb, 6)
+            local thumbRing = Instance.new("UIStroke")
+            thumbRing.Color = C.Accent
+            thumbRing.Thickness = 2
+            thumbRing.Transparency = 0
+            thumbRing.Parent = thumb
 
             -- Drag handle (invisible, full bar area)
             local dragArea = Instance.new("TextButton")
@@ -2317,9 +2328,12 @@ function XiroLib:CreateWindow(config)
             end
 
             local _slTw = nil
+            local _thumbTw = nil
             local function slideTo(pct, dur)
                 if _slTw then pcall(function() _slTw:Cancel() end) end
+                if _thumbTw then pcall(function() _thumbTw:Cancel() end) end
                 _slTw = tw(barFill, {Size = UDim2.new(pct, 0, 1, 0)}, dur)
+                _thumbTw = tw(thumbHalo, {Position = UDim2.new(pct, 0, 0.5, 0)}, dur)
             end
 
             local function updateSlider(newVal)
@@ -2427,8 +2441,8 @@ function XiroLib:CreateWindow(config)
             mainRow.BorderSizePixel = 0
             mainRow.LayoutOrder = 0
             mainRow.Parent = container
-            addCorner(mainRow, CORNER_SM)
-            addStroke(mainRow, 1, C.Border)
+            addCorner(mainRow, CORNER_MD)
+            do local _mrs = addStroke(mainRow, 1, C.BorderHair); _mrs.Transparency = A.BorderSoft end
 
             local nameLabel = Instance.new("TextLabel")
             nameLabel.Size = UDim2.new(0.45, -8, 1, 0)
@@ -2449,7 +2463,7 @@ function XiroLib:CreateWindow(config)
             valueLabel.Text = table.concat(current, ", ")
             valueLabel.TextColor3 = C.AccentText
             valueLabel.Font = FONT
-            valueLabel.TextSize = L.FSIZE_VALUE
+            valueLabel.TextSize = FSIZE_SMALL
             valueLabel.TextXAlignment = Enum.TextXAlignment.Right
             valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
             valueLabel.Parent = mainRow
@@ -2508,27 +2522,26 @@ function XiroLib:CreateWindow(config)
                     local isSelected = table.find(current, opt) ~= nil
 
                     local optBtn = Instance.new("TextButton")
-                    optBtn.Size = UDim2.new(1, 0, 0, 26)
+                    optBtn.Size = UDim2.new(1, 0, 0, 24)
                     optBtn.BackgroundColor3 = isSelected and C.AccentSoft or C.Surface1
-                    optBtn.BackgroundTransparency = isSelected and A.AccentSoft or 0
                     optBtn.BorderSizePixel = 0
                     optBtn.Text = (isSelected and "● " or "   ") .. opt
                     optBtn.TextColor3 = isSelected and C.AccentText or C.SubText
-                    optBtn.Font = L.FONT
-                    optBtn.TextSize = L.FSIZE_VALUE
+                    optBtn.Font = FONT
+                    optBtn.TextSize = FSIZE_SMALL
                     optBtn.TextXAlignment = Enum.TextXAlignment.Left
                     optBtn.LayoutOrder = i
                     optBtn.Parent = optContainer
-                    addCorner(optBtn, L.R_SM)
+                    addCorner(optBtn, CORNER_SM)
 
                     optBtn.MouseEnter:Connect(function()
                         if not (table.find(current, opt)) then
-                            tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.20)
+                            tw(optBtn, {BackgroundColor3 = C.ElemHover}, 0.08)
                         end
                     end)
                     optBtn.MouseLeave:Connect(function()
                         local sel = table.find(current, opt) ~= nil
-                        tw(optBtn, {BackgroundColor3 = sel and C.AccentDark or C.Elem}, 0.08)
+                        tw(optBtn, {BackgroundColor3 = sel and C.AccentSoft or C.Surface1}, 0.08)
                     end)
 
                     optBtn.MouseButton1Click:Connect(function()
@@ -2737,11 +2750,13 @@ function XiroLib:CreateWindow(config)
             frame.BorderSizePixel = 0
             frame.LayoutOrder = nextOrder()
             frame.Parent = scrollFrame
-            addCorner(frame, CORNER_SM)
+            addCorner(frame, CORNER_MD)
+            local _tkbs = addStroke(frame, 1, C.BorderHair)
+            _tkbs.Transparency = A.BorderSoft
 
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, -80, 1, 0)
-            label.Position = UDim2.new(0, 10, 0, 0)
+            label.Size = UDim2.new(1, -86, 1, 0)
+            label.Position = UDim2.new(0, 12, 0, 0)
             label.BackgroundTransparency = 1
             label.Text = cfg.Name or "Keybind"
             label.TextColor3 = C.Text
@@ -2751,16 +2766,29 @@ function XiroLib:CreateWindow(config)
             label.Parent = frame
 
             local keyLabel = Instance.new("TextLabel")
-            keyLabel.Size = UDim2.new(0, 60, 0, 20)
-            keyLabel.Position = UDim2.new(1, -70, 0.5, -10)
+            keyLabel.Size = UDim2.new(0, 66, 0, 22)
+            keyLabel.Position = UDim2.new(1, -76, 0.5, -11)
             keyLabel.BackgroundColor3 = C.SliderBG
             keyLabel.BorderSizePixel = 0
             keyLabel.Text = currentKey
-            keyLabel.TextColor3 = C.Accent
-            keyLabel.Font = FONT
-            keyLabel.TextSize = FSIZE_SMALL
+            keyLabel.TextColor3 = C.AccentText
+            keyLabel.Font = FONT_MONO
+            keyLabel.TextSize = FSIZE_MONO
             keyLabel.Parent = frame
-            addCorner(keyLabel, 3)
+            addCorner(keyLabel, CORNER_SM)
+            local keyStroke = Instance.new("UIStroke")
+            keyStroke.Color = C.BorderHair
+            keyStroke.Transparency = A.BorderSoft
+            keyStroke.Thickness = 1
+            keyStroke.Parent = keyLabel
+            local _keyInset = Instance.new("Frame")
+            _keyInset.Size = UDim2.new(1, -4, 0, 2)
+            _keyInset.Position = UDim2.new(0, 2, 1, -3)
+            _keyInset.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            _keyInset.BackgroundTransparency = 0.65
+            _keyInset.BorderSizePixel = 0
+            _keyInset.ZIndex = 2
+            _keyInset.Parent = keyLabel
 
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, 0, 1, 0)
@@ -2774,7 +2802,9 @@ function XiroLib:CreateWindow(config)
                 _STATE.keybindListener = nil
                 currentKey = input.KeyCode.Name
                 keyLabel.Text = currentKey
-                tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
+                tw(keyLabel, {TextColor3 = C.AccentText, BackgroundColor3 = C.SliderBG}, 0.20)
+                keyStroke.Color = C.BorderHair
+                tw(keyStroke, {Transparency = A.BorderSoft, Thickness = 1}, 0.20)
                 if flag then updateFlag(flag, currentKey) end
                 if cfg.Callback then task.spawn(cfg.Callback, currentKey) end
             end
@@ -2782,7 +2812,13 @@ function XiroLib:CreateWindow(config)
             btn.MouseButton1Click:Connect(function()
                 listening = true
                 keyLabel.Text = "..."
-                tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
+                tw(keyLabel, {BackgroundColor3 = C.AccentSoft}, 0.15)
+                keyLabel.BackgroundTransparency = A.AccentSoft
+                keyStroke.Color = C.AccentEdge
+                TS:Create(keyStroke,
+                    TweenInfo.new(0.65, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                    {Transparency = A.AccentGlow, Thickness = 2}
+                ):Play()
                 _STATE.keybindListener = captureFn
             end)
 
@@ -3011,11 +3047,11 @@ function XiroLib:Notify(cfg)
     notif.AutomaticSize = Enum.AutomaticSize.Y
     notif.BackgroundColor3 = C.Notif
     notif.BorderSizePixel = 0
-    notif.BackgroundTransparency = 1  -- starts hidden, tweened to A.PanelGlassNotif on show
+    notif.BackgroundTransparency = 1
     notif.Parent = notifContainer
-    addCorner(notif, L.R_MD)
-    local notifStroke = addStroke(notif, 1, C.BorderHair)
-    notifStroke.Transparency = A.BorderSoft
+    addCorner(notif, CORNER_MD)
+    local _ns = addStroke(notif, 1, C.BorderHair)
+    _ns.Transparency = A.BorderSoft
 
     local accentBar = Instance.new("Frame")
     accentBar.Size = UDim2.new(0, 3, 1, -8)
@@ -3024,14 +3060,19 @@ function XiroLib:Notify(cfg)
     accentBar.BorderSizePixel = 0
     accentBar.Parent = notif
     addCorner(accentBar, 2)
-    local barGrad = Instance.new("UIGradient")
-    barGrad.Rotation = 90
-    barGrad.Color = ColorSequence.new({
+    local _abGrad = Instance.new("UIGradient")
+    _abGrad.Rotation = 90
+    _abGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0,   C.AccentText),
         ColorSequenceKeypoint.new(0.5, C.Accent),
         ColorSequenceKeypoint.new(1,   C.AccentDark),
     })
-    barGrad.Parent = accentBar
+    _abGrad.Parent = accentBar
+    local _abGlow = Instance.new("UIStroke")
+    _abGlow.Color = C.AccentGlow
+    _abGlow.Thickness = 2
+    _abGlow.Transparency = A.AccentGlow
+    _abGlow.Parent = accentBar
 
     local innerPad = Instance.new("UIPadding")
     innerPad.PaddingLeft = UDim.new(0, 14)
@@ -3077,7 +3118,7 @@ function XiroLib:Notify(cfg)
     for _, c in notif:GetChildren() do
         if c:IsA("TextLabel") then c.TextTransparency = 1; tw(c, {TextTransparency = 0}, 0.25) end
     end
-    tw(notif, {BackgroundTransparency = A.PanelGlassNotif}, 0.2)
+    tw(notif, {BackgroundTransparency = 0.10}, 0.20)
 
     task.delay(duration, function()
         tw(notif, {BackgroundTransparency = 1}, 0.3)
