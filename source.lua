@@ -1,4 +1,4 @@
---VER=62
+--VER=63
 --[[
     XIRO UI Library v1.0
     Vape-style ClickGUI — draggable category panels
@@ -14,6 +14,23 @@ local TS            = game:GetService("TweenService")
 local RunService    = game:GetService("RunService")
 local HttpService   = game:GetService("HttpService")
 local LocalPlayer   = Players.LocalPlayer
+
+---------- GLOBAL STATE (survives multi-injection, prevents UIS leak) ----------
+-- Without this, every script re-inject re-runs the file → adds 3+ new UIS:Connect
+-- handlers (input dispatcher + window toggle). After N injects, every mouse move
+-- fires N×handlers, each holding closure refs to dead UIs → GC pressure → 1GB
+-- single-frame RSS spike → engine crash. Diagnosed 2026-05-23.
+local _STATE_KEY = "_XIRO_UI_STATE_v63"
+if not _G[_STATE_KEY] then
+    _G[_STATE_KEY] = {
+        moveHandlers   = {},       -- shared callback registry (set)
+        endHandlers    = {},       -- shared callback registry (set)
+        keybindListener = nil,     -- single fn or nil
+        windowConns    = {},       -- per-window UIS connections to disconnect on destroy
+        uisHooked      = false,    -- module-level UIS:Connect run flag
+    }
+end
+local _STATE = _G[_STATE_KEY]
 
 ---------- THEME ----------
 -- Premium dark palette: deeper blacks, subtle elevation tiers, richer accent.
@@ -134,33 +151,32 @@ local function pulseRemove(stripe)
 end
 
 ---------- INPUT DISPATCHER ----------
--- Consolidate global UIS listeners: handlers opt in only while active,
--- so idle UI costs 0 work per mouse-move event.
+-- All listeners route through _STATE so multi-injection doesn't multiply handlers.
+local moveHandlers = _STATE.moveHandlers
+local endHandlers  = _STATE.endHandlers
 
-local moveHandlers = {}       -- [fn] = true, called on MouseMovement/Touch change
-local endHandlers = {}        -- [fn] = true, called on MouseButton1/Touch end
-local keybindListener = nil   -- single active keybind capture: fn(input) or nil
-
-UIS.InputChanged:Connect(function(input)
-    local t = input.UserInputType
-    if t == Enum.UserInputType.MouseMovement or t == Enum.UserInputType.Touch then
-        for fn in pairs(moveHandlers) do fn(input) end
-    end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    local t = input.UserInputType
-    if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
-        for fn in pairs(endHandlers) do fn(input) end
-    end
-end)
-
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if keybindListener and input.UserInputType == Enum.UserInputType.Keyboard then
-        keybindListener(input)
-    end
-end)
+-- Module-level UIS hooks register ONCE per Roblox session (across re-injects)
+if not _STATE.uisHooked then
+    _STATE.uisHooked = true
+    UIS.InputChanged:Connect(function(input)
+        local t = input.UserInputType
+        if t == Enum.UserInputType.MouseMovement or t == Enum.UserInputType.Touch then
+            for fn in pairs(_STATE.moveHandlers) do fn(input) end
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        local t = input.UserInputType
+        if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
+            for fn in pairs(_STATE.endHandlers) do fn(input) end
+        end
+    end)
+    UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if _STATE.keybindListener and input.UserInputType == Enum.UserInputType.Keyboard then
+            _STATE.keybindListener(input)
+        end
+    end)
+end
 
 ---------- UTILITIES ----------
 
@@ -474,7 +490,8 @@ function XiroLib:CreateWindow(config)
     -- Toggle UI keybind (防连按卡顿: token失效 + 动画锁)
     local toggleToken = 0
     local toggleBusy = false
-    UIS.InputBegan:Connect(function(input, gpe)
+    -- Track this connection so Destroy() can disconnect it (UIS service outlives the GUI)
+    local _toggleConn = UIS.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.KeyCode ~= toggleKeybind then return end
         if toggleBusy then return end -- 动画进行中，忽略按键
@@ -508,6 +525,8 @@ function XiroLib:CreateWindow(config)
             end)
         end
     end)
+    -- Register toggle conn for cleanup on Destroy
+    table.insert(_STATE.windowConns, _toggleConn)
 
     -- Loading screen
     local loadScreen = Instance.new("Frame")
@@ -1664,7 +1683,7 @@ function XiroLib:CreateWindow(config)
                 local captureFn
                 captureFn = function(input)
                     listening = false
-                    keybindListener = nil
+                    _STATE.keybindListener = nil
                     currentKey = input.KeyCode.Name
                     keyLabel.Text = currentKey
                     tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
@@ -1676,7 +1695,7 @@ function XiroLib:CreateWindow(config)
                     listening = true
                     keyLabel.Text = "..."
                     tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
-                    keybindListener = captureFn
+                    _STATE.keybindListener = captureFn
                 end)
 
                 frame.MouseEnter:Connect(function() tw(frame, {BackgroundColor3 = C.ElemHover}, 0.1) end)
@@ -2492,7 +2511,7 @@ function XiroLib:CreateWindow(config)
             local captureFn
             captureFn = function(input)
                 listening = false
-                keybindListener = nil
+                _STATE.keybindListener = nil
                 currentKey = input.KeyCode.Name
                 keyLabel.Text = currentKey
                 tw(keyLabel, {TextColor3 = C.Accent, BackgroundColor3 = C.SliderBG}, 0.2)
@@ -2504,7 +2523,7 @@ function XiroLib:CreateWindow(config)
                 listening = true
                 keyLabel.Text = "..."
                 tw(keyLabel, {TextColor3 = Color3.fromRGB(255, 200, 100), BackgroundColor3 = C.AccentDark}, 0.15)
-                keybindListener = captureFn
+                _STATE.keybindListener = captureFn
             end)
 
             frame.MouseEnter:Connect(function()
@@ -2832,6 +2851,16 @@ function XiroLib:Destroy()
     flagStore = {}
     panels = {}
     panelCount = 0
+    -- Clean up window-scoped UIS connections (toggle keybind etc) — these don't auto-die
+    -- when screenGui is destroyed because they're on the UIS service, not on a GUI child.
+    for _, conn in ipairs(_STATE.windowConns) do
+        pcall(function() conn:Disconnect() end)
+    end
+    _STATE.windowConns = {}
+    -- Clear active keybind capture so dead UI doesn't keep listening
+    _STATE.keybindListener = nil
+    -- Note: module-level UIS hooks stay (they read _STATE on each fire,
+    -- so empty handler tables = zero work per input).
 end
 
 return XiroLib
